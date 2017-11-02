@@ -1,0 +1,5 @@
+1509630998072	Rename method 'loadDataSetIntoDB'
+1509635403209	Rename local variable 'userID'
+1509635411555	Rename local variable 'itemID'
+1509635421539	Rename local variable 'rating'
+1509637504745	Rename package 'hyu.kskim.recomsys.prepare.movielens'

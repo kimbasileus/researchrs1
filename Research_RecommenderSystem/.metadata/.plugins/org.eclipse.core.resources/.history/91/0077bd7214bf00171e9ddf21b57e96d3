@@ -1,0 +1,5 @@
+package hyu.kskim.recomsys.prepare.utils;
+
+public class DBManager {
+
+}

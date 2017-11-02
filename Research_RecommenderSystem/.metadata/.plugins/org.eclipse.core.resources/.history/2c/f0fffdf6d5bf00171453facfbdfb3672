@@ -1,0 +1,49 @@
+package hyu.kskim.recomsys.prepare.movielens;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+import hyu.kskim.recomsys.prepare.utils.DBManager;
+import hyu.kskim.recomsys.prepare.utils.FileIO;
+
+public class MovieLensDataset {
+	String path = "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small";
+	String dbId = "root";
+	String dbPw = "kyungsookim";
+	DBManager db = new DBManager();
+	FileIO file = new FileIO();
+	
+	public MovieLensDataset() {
+		
+		
+	}
+	
+	public void loadDataSetIntoDB(String fileName) {
+		// 1. Loading & Write DB ratings datasets (ratings.csv)
+		String dir = path+"\\"+fileName+".csv";
+		try{
+			 StringBuffer buffer = new StringBuffer();
+			 BufferedReader reader = new BufferedReader(new FileReader(dir));
+			 String inputLine = null;
+			 while ((inputLine = reader.readLine()) != null){
+				 System.out.println(inputLine);
+			     buffer.append(inputLine);
+			 }
+			 reader.close();
+			 //System.out.println(buffer.toString());
+
+		}catch(Exception e){
+			System.err.println("Reader error: "+e.getMessage());
+		}
+		
+		
+		// 2. Loading & Write DB tags dataset (ratings.csv)
+		
+		
+		// 3. Loading & Write DB movies dataset (movies.csv)
+		
+		
+		// 4. Loading & Write DB content metadata dataset (links.csv)
+		
+	}
+}

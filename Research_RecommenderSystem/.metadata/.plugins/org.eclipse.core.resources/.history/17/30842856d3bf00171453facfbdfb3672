@@ -1,0 +1,23 @@
+package hyu.kskim.recomsys.prepare.movielens;
+
+public class MovieLensDataset {
+	String path = "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small";
+	String dbId = "root";
+	String dbPw = "kyungsookim";
+	
+	public MovieLensDataset() {
+		
+		
+	}
+	
+	public void loadDataSetIntoDB() {
+		// 1. Loading & Write DB ratings datasets (ratings.csv)
+		
+		// 2. Loading & Write DB tags dataset (ratings.csv)
+		
+		// 3. Loading & Write DB movies dataset (movies.csv)
+		
+		// 4. Loading & Write DB content metadata dataset (links.csv)
+		
+	}
+}
