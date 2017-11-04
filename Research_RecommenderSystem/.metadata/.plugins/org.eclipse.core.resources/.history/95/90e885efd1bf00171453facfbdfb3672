@@ -1,7 +1,0 @@
-package hyu.kskim.recomsys.prepare.utils;
-
-import java.sql.*;
-
-public class DBManager {
-
-}

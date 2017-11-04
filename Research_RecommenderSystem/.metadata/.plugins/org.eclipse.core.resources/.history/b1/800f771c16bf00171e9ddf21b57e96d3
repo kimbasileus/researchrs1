@@ -1,5 +1,0 @@
-package hyu.kskim.recomsys.prepare.movielens;
-
-public class MovieLensDataset {
-
-}
