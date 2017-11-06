@@ -2,7 +2,7 @@ package hyu.kskim.research.recomsys.utility;
 
 import java.util.Random;
 
-import hyu.kskim.research.recomsys.utility.ds.ISTPair_CosineSim;
+import hyu.kskim.research.recomsys.ist.ISTPair_CosineSim;
 
 public class Main_Utility {
 

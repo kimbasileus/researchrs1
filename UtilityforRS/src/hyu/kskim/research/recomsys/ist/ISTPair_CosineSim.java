@@ -1,4 +1,4 @@
-package hyu.kskim.research.recomsys.utility.ds;
+package hyu.kskim.research.recomsys.ist;
 
 public class ISTPair_CosineSim {
 	public double A = 0;

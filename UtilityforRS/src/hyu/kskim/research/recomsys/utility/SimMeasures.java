@@ -2,11 +2,13 @@ package hyu.kskim.research.recomsys.utility;
 
 import java.util.ArrayList;
 
-import hyu.kskim.research.recomsys.utility.ds.ISTPair_CosineSim;
+import hyu.kskim.research.recomsys.ist.ISTPair_CosineSim;
 import hyu.kskim.research.recomsys.utility.ds.IndexPair;
 
 public class SimMeasures {
 	public static final int inf = -1;
+
+	///////////////////////////////////////////////////////////////////////////////////////////
 	
 	/**
 	 * Cosine Similarity: Traditional Vector Similarity
@@ -55,8 +57,8 @@ public class SimMeasures {
 			return inf;
 		}
 	}
+		
 	
-
 	/**
 	 * Cosine Similarity: Traditional Vector Similarity
 	 * @param x vector x (double type)
@@ -106,8 +108,8 @@ public class SimMeasures {
 			return null;
 		}
 	}
-	
-	
+		
+	///////////////////////////////////////////////////////////////////////////////////////////
 
 	/**
 	 * Cosine Similarity: Improved Vector Similarity
@@ -165,6 +167,68 @@ public class SimMeasures {
 		}
 	}
 		
+	
+	/**
+	 * Cosine Similarity: Improved Vector Similarity
+	 * @param x vector x (Index-value Pair List type)
+	 * @param y vector y (Index-value Pair List  type)
+	 * @return IST similarity object (ISTPair_CosineSim type)
+	 */
+	public ISTPair_CosineSim cosineSim_ISTPair(IndexPair[] x, IndexPair[] y) {
+		try {
+			if(x==null || y==null) return null;
+			
+			int lenX = x.length;
+			int lenY = y.length;
+			
+			if(lenX==0 || lenY ==0) return null;
+			
+			//int n=0;
+			double sumXY = 0; double sumXq = 0; double sumYq = 0;
+			
+			int i=0; int j=0;
+			
+			long start = System.currentTimeMillis();
+			int count=0;
+			while(i < lenX && j < lenY) {
+				if(x[i].index < y[j].index) {
+					//count++; 
+					i++; continue;
+				}else if (x[i].index > y[j].index) {
+					//count++; 
+					j++; continue;
+				}else{
+					//count++;
+					sumXY += x[i].value*y[j].value;
+					sumXq += x[i].value*x[i].value;
+					sumYq += y[j].value*y[j].value;
+					//n++;
+					
+					i++; j++;
+				}
+			}
+			
+			long end = System.currentTimeMillis();
+			
+			double sim = 0;
+			if(sumXq <=0 || sumYq <=0) return null;
+			
+			sim = sumXY/(Math.sqrt(sumXq)*Math.sqrt(sumYq));
+			
+			System.out.println("cosineSim2 running time: "+ (end-start)/1000.0 +" count is: "+count);
+			
+			ISTPair_CosineSim result = new ISTPair_CosineSim(sumXY, sumXq, sumYq, sim);
+			
+			return result;
+		}catch(Exception e) {
+			System.out.println("cosineSim2 Exception: "+e.getMessage());
+			return null;
+		}
+	}
+		
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
 	
 	public IndexPair[] transformToIndexPairArray(double x[]){
 		int length = 0;

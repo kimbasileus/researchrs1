@@ -17,7 +17,7 @@ public class MovieLensDataset {
 	String dbPw = "kyungsookim";
 	DBManager db = new DBManager(null, null, null);
 	FileIO file = new FileIO();
-	HashSet<Integer> testItemList = null;
+//	HashSet<Integer> testItemList = null;
 	
 	int numOfUsers;
 	int numOfItems;
@@ -81,6 +81,46 @@ public class MovieLensDataset {
 			System.err.println("loadRatingDataSetIntoDB error: "+e.getMessage());
 		}
 	}
+	
+	// Current working code..........
+	/*
+	public void loadUserInformationIntoDB() {
+		try {
+			HashSet<Integer> userList = new HashSet<Integer>();
+			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT distinct userID FROM movielens.ratings;");
+			while(rs0.next()) {
+				userList.add(rs0.getInt(1));
+			}
+			rs0.close();
+			
+			// 
+			
+			ResultSet rs1 = null;
+			Iterator<Integer> itr = userList.iterator();
+			
+			ArrayList<UserInfo> users = new ArrayList<UserInfo>();
+			
+			while(itr.hasNext()) { // For each user
+				rs1 = this.db.getStmt().executeQuery("SELECT rating FROM movielens.ratings "
+						+ "where userID = "+itr.next()+";");
+				
+				double sumOfRating = 0;	int numOfRatings = 0; double avg = 0;
+				while(rs1.next()) { // For each rating
+					numOfRatings++;
+					sumOfRating += rs1.getDouble(1);
+				}
+				
+				if(numOfRatings==0) avg = -1;
+				else avg = sumOfRating/(double) numOfRatings;
+				
+				
+			}
+			
+		}catch(Exception e){
+			System.err.println("loadUserInformationIntoDB error: "+e.getMessage());
+		}
+	}
+	*/
 	
 	
 	
@@ -189,7 +229,7 @@ public class MovieLensDataset {
 			
 			RandomNumbers rn = new RandomNumbers();
 			//int testItemList[] = rn.getNRandomNumbers(1, this.numOfRatings, numOfTestRatings);
-			this.testItemList = rn.getNRandomNumbers_Set(1, this.numOfRatings, numOfTestRatings);
+			HashSet<Integer> testItemList = rn.getNRandomNumbers_Set(1, this.numOfRatings, numOfTestRatings);
 			Iterator<Integer> itr = testItemList.iterator();
 			
 			int n = numOfTestRatings;
@@ -213,13 +253,10 @@ public class MovieLensDataset {
 					System.out.println(userNo+"\t"+itemNo+"\t"+rating+"\t"+timeStamp+"\t"+id);
 					
 					extractedList.add(new testSetPair(userNo, itemNo, rating, timeStamp, id));
-					/*
-					this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset_"+percent+"` (`userID`, `itemID`, `rating`, `timestamp`, `No`) "
-							+ "VALUES ('"+userNo+"', '"+itemNo+"', '"+rating+"', '"+timeStamp+"', '"+no+"');");
-					*/
 				}
 			}
 			
+			testItemList.clear();
 			rs.close();
 			
 		//	testItemList = null;
@@ -236,9 +273,152 @@ public class MovieLensDataset {
 						+ "VALUES ('"+node.id+"', '"+node.userNo+"', '"+node.itemNo+"', '"+node.rating+"', '"+node.timeStamp+"');");
 				
 			}
+			
+			extractedList.clear();
 		}catch(Exception e){
 			System.err.println("makeTestDataSet error: "+e.getMessage());
 		}
+	}
+
+	
+
+	public void makeCumulatedDataSet(double previous_ratio, double now_ratio) {
+		try {
+			double ratioOfTestRatings = now_ratio - previous_ratio;
+			int percent = (int) (now_ratio*100.0);
+			
+			int numOfTestRatings = (int) (this.numOfRatings*ratioOfTestRatings);
+			this.numOfTestRatings = numOfTestRatings;
+			this.numOfTrainingRatings = this.numOfRatings - this.numOfTestRatings;
+			
+			
+			// 이전의 테스트 데이터들의 ID를 DB로부터 읽어들인다.
+			HashSet<Integer> testItemList = new HashSet<Integer>();
+			//this.testItemList.clear();
+			ResultSet rs0 = null;
+			rs0 = this.db.getStmt().executeQuery("SELECT ID "
+					+ "FROM movielens.ratings_testset_"+(int) (previous_ratio*100.0)+";");
+			int previousID = 0;
+			while(rs0.next()) {
+				previousID = rs0.getInt(1);
+				testItemList.add(previousID);
+			}
+			rs0.close();
+			
+			RandomNumbers rn = new RandomNumbers();
+			
+			testItemList = rn.getNCummulatedRandomNumbers_Set(1, this.numOfRatings, numOfTestRatings, testItemList);
+			Iterator<Integer> itr = testItemList.iterator();
+			
+			int id = 0; int userNo; int itemNo; double rating; int timeStamp;
+			ArrayList<testSetPair> extractedList = new ArrayList<testSetPair>();
+			
+			ResultSet rs = null;
+			while(itr.hasNext()) {
+				id = itr.next();
+				
+				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp, ID "
+						+ "FROM movielens.ratings where ID = "+id+";");
+				
+				while(rs.next()) {
+					userNo = rs.getInt(1);
+					itemNo = rs.getInt(2);
+					rating = rs.getDouble(3);
+					timeStamp = rs.getInt(4);
+					
+					System.out.println(userNo+"\t"+itemNo+"\t"+rating+"\t"+timeStamp+"\t"+id);
+					
+					extractedList.add(new testSetPair(userNo, itemNo, rating, timeStamp, id));
+				}
+			}
+			
+			testItemList.clear();
+			rs.close();
+			
+		//	testItemList = null;
+		//	System.gc();
+			System.out.println("----------------");
+			
+			int len = extractedList.size();
+			testSetPair node = null;
+			for(int i=0; i < len; i++) {
+				node = extractedList.get(i);
+				
+				System.out.println(node.userNo+"\t"+node.itemNo+"\t"+node.rating+"\t"+node.timeStamp+"\t"+(i+1));
+				
+				this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset_"+percent+"` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
+						+ "VALUES ('"+node.id+"', '"+node.userNo+"', '"+node.itemNo+"', '"+node.rating+"', '"+node.timeStamp+"');");
+				
+			}
+			
+			extractedList.clear();
+		}catch(Exception e){
+			System.err.println("makeCumulatedDataSet error: "+e.getMessage());
+		}
+	}
+
+	
+	public void verify(int previous, int now) {
+		try {
+			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID "
+					+ "FROM movielens.ratings_testset_"+previous+";");
+			
+			HashSet<Integer> set0 = new HashSet<Integer>();
+			int id0 = 0;
+			while(rs0.next()) {
+				id0 = rs0.getInt(1);
+				set0.add(id0);
+				System.out.println("read previous set: "+id0);
+			}
+			rs0.close();
+			
+			ResultSet rs1 = this.db.getStmt().executeQuery("SELECT ID "
+					+ "FROM movielens.ratings_testset_"+now+";");
+			
+			HashSet<Integer> set1 = new HashSet<Integer>();
+			int id1 = 0;
+			while(rs1.next()) {
+				id1 = rs1.getInt(1);
+				set1.add(id1);
+				System.out.println("read now set: "+id1);
+			}
+			rs1.close();
+			
+			boolean isCorrect = true;
+			Iterator<Integer> itr = set0.iterator();
+			while(itr.hasNext()) {
+				if(!set1.contains(itr.next())) {
+					System.out.println("!!!!!");
+					isCorrect = false;
+				}
+			}
+			
+			if(isCorrect) System.out.println("Correct set.");
+			else System.out.println("Incorrect set.");
+			
+		}catch(Exception e){
+			System.err.println("verify error: "+e.getMessage());
+		}
+	}
+	
+	
+	private void startMovieLensDataset() {
+		//1. Loading movie lens dataset
+		run();
+		
+		//2. make test data set (0.2)
+		makeTestDataSet(0.2);
+		
+		//3. make cummulated dataSet (0.4, 0.6, 0.8)
+		makeCumulatedDataSet(0.2, 0.4);
+		makeCumulatedDataSet(0.4, 0.6);
+		makeCumulatedDataSet(0.6, 0.8);
+		
+		//4. Verify
+		verify(20, 40);
+		verify(40, 60);
+		verify(60, 80);
+		
 	}
 }
 
@@ -259,4 +439,20 @@ class testSetPair{
 		this.timeStamp = timeStamp;
 		this.id = no;
 	}
+}
+
+
+class UserInfo{
+	public int userID;
+	public double sumOFRatings;
+	public int numOfRatings;
+	public double avg;
+	
+	public UserInfo(int userID, double sumOFRatings, int numOfRatings, double avg) {
+		super();
+		this.userID = userID;
+		this.sumOFRatings = sumOFRatings;
+		this.numOfRatings = numOfRatings;
+		this.avg = avg;
+	}	
 }
