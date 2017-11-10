@@ -12,12 +12,12 @@ import hyu.kskim.recomsys.prepare.utils.FileIO;
 import hyu.kskim.recomsys.prepare.utils.RandomNumbers;
 
 public class MovieLensDataset {
+	String schema = "movielens";
 	String path = "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small"; // Dataset directory path
 	String dbId = "root";
 	String dbPw = "kyungsookim";
 	DBManager db = new DBManager(null, null, null);
 	FileIO file = new FileIO();
-//	HashSet<Integer> testItemList = null;
 	
 	int numOfUsers;
 	int numOfItems;
@@ -26,37 +26,39 @@ public class MovieLensDataset {
 	int numOfTestRatings;
 	int numOfTrainingRatings;
 	
-	public MovieLensDataset(int numOfUsers, int numOfItems, int numOfRatings) {
-		db.connectDB("root", "kyungsookim");
+	public MovieLensDataset(String schema, String dataset_Path, int numOfUsers, int numOfItems, int numOfRatings) {
+		this.db.connectDB("root", "kyungsookim");
+		
+		if(schema!=null) this.schema = schema;
+		if(dataset_Path!=null) this.path = dataset_Path;
 		this.numOfUsers = numOfUsers; // 671
 		this.numOfItems = numOfItems; // 9125
 		this.numOfRatings = numOfRatings; // 100004
 	}
 	
-	public void run() {
-		this.loadRatingDataSetIntoDB();
-		this.loadMovieContentDataSetIntoDB();
-		this.loadMovieLinkDataSetIntoDB();
-		
-		db.closeDB();
+	public void endMovieLensDataset() { // ¼Ò¸êÀÚ
+		this.db.closeDB();
 	}
 	
-	public void loadRatingDataSetIntoDB() {
+	public void loadInitialDataset_into_DB() {
+		this.loadRatings_into_DB(this.schema, false);
+		this.loadUsers_into_DB(this.schema);
+		this.loadItems_into_DB(this.schema);
+		this.loadMovieLinkData_into_ItemDB(this.schema);
+	}
+
+	
+	public void loadRatings_into_DB(String schema, boolean isTrainSet) {  // If the table is trainset, tableName=ratings_trainset
 		String dir = path+"\\ratings.csv";
 		try{
-			
-			 // Update Information Table
-			 db.getStmt().executeUpdate("INSERT INTO `movielens`.`information` (`ID`, `dbName`, `numOfUsers`, `numOfItems`, `numOfRatings`) "
-					+ "VALUES ('1', 'movielens_small', '"+this.numOfUsers+"', '"+this.numOfItems+"', '"+this.numOfRatings+"');");
-			
-			 BufferedReader reader = new BufferedReader(new FileReader(dir));
-			 String inputLine = null;
+			BufferedReader reader = new BufferedReader(new FileReader(dir));
+			String inputLine = null;
 			 
-			 String temp[] = null; int userID; int itemID; double rating; int timestamp;
-			 int count = -1;
-			 while ((inputLine = reader.readLine()) != null){
-				 if(count==-1) {
-					 count++;
+			String temp[] = null; int userID; int itemID; double rating; int timestamp;
+			int count = -1;
+			while ((inputLine = reader.readLine()) != null){
+				if(count==-1) {
+					count++;
 					 continue;
 				 }
 				
@@ -71,60 +73,59 @@ public class MovieLensDataset {
 				 count++;
 				 System.out.println("["+count+"] \t"+userID+"\t"+itemID+"\t"+rating+"\t"+timestamp);
 				 
-				 db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
-				 		+ "VALUES ('"+count+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timestamp+"');");
+				 String sql = null;
+			     if(!isTrainSet) // default ratings table
+					 sql = "INSERT INTO `"+schema+"`.`ratings` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
+							+ "VALUES ('"+count+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timestamp+"');";
+			     else // ratings_trainset
+			    	 sql = "INSERT INTO `"+schema+"`.`ratings_trainset` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
+								+ "VALUES ('"+count+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timestamp+"');";
+					
+				 db.getStmt().executeUpdate(sql);
 				 
 			 }
 			 
 			 reader.close();
 		}catch(Exception e){
-			System.err.println("loadRatingDataSetIntoDB error: "+e.getMessage());
+			System.err.println("loadRatings_into_DB error: "+e.getMessage());
 		}
 	}
 	
-	// Current working code..........
-	/*
-	public void loadUserInformationIntoDB() {
+	
+	
+	public void loadUsers_into_DB(String schema) {
 		try {
-			HashSet<Integer> userList = new HashSet<Integer>();
-			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT distinct userID FROM movielens.ratings;");
+			ArrayList<Integer> userList = new ArrayList<Integer>();
+			String sql = "SELECT distinct userID FROM "+schema+".ratings;";
+			
+			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
+			int userID = 0;
 			while(rs0.next()) {
-				userList.add(rs0.getInt(1));
+				userID = rs0.getInt(1);
+				userList.add(userID);
+				System.out.println(userID);
 			}
+			
 			rs0.close();
 			
-			// 
+			int len = userList.size();
 			
-			ResultSet rs1 = null;
-			Iterator<Integer> itr = userList.iterator();
-			
-			ArrayList<UserInfo> users = new ArrayList<UserInfo>();
-			
-			while(itr.hasNext()) { // For each user
-				rs1 = this.db.getStmt().executeQuery("SELECT rating FROM movielens.ratings "
-						+ "where userID = "+itr.next()+";");
-				
-				double sumOfRating = 0;	int numOfRatings = 0; double avg = 0;
-				while(rs1.next()) { // For each rating
-					numOfRatings++;
-					sumOfRating += rs1.getDouble(1);
-				}
-				
-				if(numOfRatings==0) avg = -1;
-				else avg = sumOfRating/(double) numOfRatings;
-				
-				
+			for(int i=0; i < len; i++)
+			{
+				userID = userList.get(i);
+				this.db.getStmt().execute("INSERT INTO `"+schema+"`.`users` (`ID`) VALUES ('"+userID+"');");
 			}
 			
+			
 		}catch(Exception e){
-			System.err.println("loadUserInformationIntoDB error: "+e.getMessage());
+			System.err.println("loadUsers_into_DB error: "+e.getMessage());
 		}
 	}
-	*/
 	
 	
 	
-	public void loadMovieContentDataSetIntoDB() {
+	
+	public void loadItems_into_DB(String schema) {
 		String dir = path+"\\movies.csv";
 		try{
 			 BufferedReader reader = new BufferedReader(new FileReader(dir));
@@ -162,20 +163,22 @@ public class MovieLensDataset {
 				 count++;
 				 System.out.println("["+count+"] \t"+movieID+"\t"+title+"\t"+genres);
 				 
-				 db.getStmt().executeUpdate("INSERT INTO `movielens`.`movies` (`itemID`, `title`, `genres`) "
-				 		+ "VALUES ('"+movieID+"', '"+title+"', '"+genres+"');");
+				 String sql = "INSERT INTO `"+schema+"`.`items` (`ID`, `movieID`, `name`, `genres`) "
+				 				+ "VALUES ('"+count+"', '"+movieID+"', '"+title+"', '"+genres+"');";
+				 
+				 db.getStmt().executeUpdate(sql);
 				
 			 }
 			 reader.close();
 			 
 		}catch(Exception e){
-			System.err.println("loadMovieContentDataSetIntoDB error: "+e.getMessage());
+			System.err.println("loadItems_into_DB error: "+e.getMessage());
 		}
 	}
 	
 	
 	
-	public void loadMovieLinkDataSetIntoDB() {
+	public void loadMovieLinkData_into_ItemDB(String schema) {
 		String dir = path+"\\links.csv";
 		try{
 			 BufferedReader reader = new BufferedReader(new FileReader(dir));
@@ -206,14 +209,15 @@ public class MovieLensDataset {
 				 count++;
 				 System.out.println("["+count+"] \t"+movieID+"\t"+imdbID+"\t"+tmdbID);
 				 
-				 db.getStmt().executeUpdate("UPDATE `movielens`.`movies` "
-						+ "SET `imdbID`='"+imdbID+"', `tmdbID`='"+tmdbID+"' WHERE `itemID`='"+movieID+"';");
+				 String sql = "UPDATE `"+schema+"`.`items` "
+							+ "SET `imdbID`='"+imdbID+"', `tmdbID`='"+tmdbID+"' WHERE `movieID`='"+movieID+"';";
+				 db.getStmt().executeUpdate(sql);
 				
 			 }
 			 reader.close();
 			 
 		}catch(Exception e){
-			System.err.println("loadMovieLinkDataSetIntoDB error: "+e.getMessage());
+			System.err.println("loadMovieLinkData_into_ItemDB error: "+e.getMessage());
 		}
 	}
 	
@@ -404,7 +408,7 @@ public class MovieLensDataset {
 	
 	private void startMovieLensDataset() {
 		//1. Loading movie lens dataset
-		run();
+		loadInitialDataset_into_DB();
 		
 		//2. make test data set (0.2)
 		makeTestDataSet(0.2);
