@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Iterator;
 
 import hyu.kskim.recomsys.prepare.utils.DBManager;
@@ -223,8 +224,9 @@ public class MovieLensDataset {
 	
 	
 	
-	public void makeTestDataSet(double ratioOfTestRatings) {
+	public void makeTestDataSet(String fileDir, String schema, double ratioOfTestRatings) {
 		try {
+			FileIO file = new FileIO();
 			int percent = (int) (ratioOfTestRatings*100.0);
 			
 			int numOfTestRatings = (int) (this.numOfRatings*ratioOfTestRatings);
@@ -239,14 +241,13 @@ public class MovieLensDataset {
 			int n = numOfTestRatings;
 			int id = 0; int userNo; int itemNo; double rating; int timeStamp;
 			
-			ArrayList<testSetPair> extractedList = new ArrayList<testSetPair>();
-			
+			StringBuffer sb = new StringBuffer();
 			ResultSet rs = null;
 			while(itr.hasNext()) {
 				id = itr.next();
 				
-				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp, ID "
-						+ "FROM movielens.ratings where ID = "+id+";");
+				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp "
+						+ "FROM `"+schema+"`.`ratings` where ID = "+id+";");
 				
 				while(rs.next()) {
 					userNo = rs.getInt(1);
@@ -254,31 +255,18 @@ public class MovieLensDataset {
 					rating = rs.getDouble(3);
 					timeStamp = rs.getInt(4);
 					
-					System.out.println(userNo+"\t"+itemNo+"\t"+rating+"\t"+timeStamp+"\t"+id);
+					System.out.println(id+","+userNo+","+itemNo+","+rating+","+timeStamp);
 					
-					extractedList.add(new testSetPair(userNo, itemNo, rating, timeStamp, id));
+					sb.append(id+","+userNo+","+itemNo+","+rating+","+timeStamp).append("\n");
 				}
 			}
 			
 			testItemList.clear();
 			rs.close();
 			
-		//	testItemList = null;
-		//	System.gc();
-			System.out.println("----------------");
+			String dir = fileDir + "ratings_testset_"+percent+".testset";
+			file.writer(dir, sb.toString());
 			
-			testSetPair node = null;
-			for(int i=0; i < n; i++) {
-				node = extractedList.get(i);
-				
-				System.out.println(node.userNo+"\t"+node.itemNo+"\t"+node.rating+"\t"+node.timeStamp+"\t"+(i+1));
-				
-				this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset_"+percent+"` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
-						+ "VALUES ('"+node.id+"', '"+node.userNo+"', '"+node.itemNo+"', '"+node.rating+"', '"+node.timeStamp+"');");
-				
-			}
-			
-			extractedList.clear();
 		}catch(Exception e){
 			System.err.println("makeTestDataSet error: "+e.getMessage());
 		}
@@ -286,7 +274,7 @@ public class MovieLensDataset {
 
 	
 
-	public void makeCumulatedDataSet(double previous_ratio, double now_ratio) {
+	public void makeCumulatedDataSet(String fileDir, double previous_ratio, double now_ratio) {
 		try {
 			double ratioOfTestRatings = now_ratio - previous_ratio;
 			int percent = (int) (now_ratio*100.0);
@@ -296,19 +284,28 @@ public class MovieLensDataset {
 			this.numOfTrainingRatings = this.numOfRatings - this.numOfTestRatings;
 			
 			
-			// 이전의 테스트 데이터들의 ID를 DB로부터 읽어들인다.
-			HashSet<Integer> testItemList = new HashSet<Integer>();
-			//this.testItemList.clear();
-			ResultSet rs0 = null;
-			rs0 = this.db.getStmt().executeQuery("SELECT ID "
-					+ "FROM movielens.ratings_testset_"+(int) (previous_ratio*100.0)+";");
-			int previousID = 0;
-			while(rs0.next()) {
-				previousID = rs0.getInt(1);
-				testItemList.add(previousID);
-			}
-			rs0.close();
 			
+			
+			// 이전의 테스트 데이터들의 ID를 DB로부터 읽어들인다.
+			String dir = fileDir + "ratings_testset_"+((int)(previous_ratio*100))+".testset";
+			HashSet<Integer> testItemList = new HashSet<Integer>();
+			
+			StringBuffer buffer = new StringBuffer();
+			BufferedReader reader = new BufferedReader(new FileReader(dir));
+			String inputLine = null; String pair[] = null;
+			while ((inputLine = reader.readLine()) != null){
+				pair = inputLine.split(",");
+				if(pair==null) continue;
+				
+				testItemList.add(Integer.parseInt(pair[0]));
+			}
+			reader.close();
+			System.out.println(buffer.toString());
+			
+			
+			
+			
+			// 랜덤 추출
 			RandomNumbers rn = new RandomNumbers();
 			
 			testItemList = rn.getNCummulatedRandomNumbers_Set(1, this.numOfRatings, numOfTestRatings, testItemList);
@@ -317,12 +314,13 @@ public class MovieLensDataset {
 			int id = 0; int userNo; int itemNo; double rating; int timeStamp;
 			ArrayList<testSetPair> extractedList = new ArrayList<testSetPair>();
 			
+			StringBuffer sb = new StringBuffer();
 			ResultSet rs = null;
 			while(itr.hasNext()) {
 				id = itr.next();
 				
-				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp, ID "
-						+ "FROM movielens.ratings where ID = "+id+";");
+				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp "
+						+ "FROM `"+schema+"`.`ratings` where ID = "+id+";");
 				
 				while(rs.next()) {
 					userNo = rs.getInt(1);
@@ -330,69 +328,59 @@ public class MovieLensDataset {
 					rating = rs.getDouble(3);
 					timeStamp = rs.getInt(4);
 					
-					System.out.println(userNo+"\t"+itemNo+"\t"+rating+"\t"+timeStamp+"\t"+id);
+					System.out.println(id+","+userNo+","+itemNo+","+rating+","+timeStamp);
 					
-					extractedList.add(new testSetPair(userNo, itemNo, rating, timeStamp, id));
+					sb.append(id+","+userNo+","+itemNo+","+rating+","+timeStamp).append("\n");
 				}
 			}
 			
 			testItemList.clear();
 			rs.close();
 			
-		//	testItemList = null;
-		//	System.gc();
-			System.out.println("----------------");
+			dir = fileDir + "ratings_testset_"+percent+".testset";
+			file.writer(dir, sb.toString());
 			
-			int len = extractedList.size();
-			testSetPair node = null;
-			for(int i=0; i < len; i++) {
-				node = extractedList.get(i);
-				
-				System.out.println(node.userNo+"\t"+node.itemNo+"\t"+node.rating+"\t"+node.timeStamp+"\t"+(i+1));
-				
-				this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset_"+percent+"` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
-						+ "VALUES ('"+node.id+"', '"+node.userNo+"', '"+node.itemNo+"', '"+node.rating+"', '"+node.timeStamp+"');");
-				
-			}
-			
-			extractedList.clear();
 		}catch(Exception e){
 			System.err.println("makeCumulatedDataSet error: "+e.getMessage());
 		}
 	}
 
 	
-	public void verify(int previous, int now) {
+	public void verify(String fileDir, int previous, int now) {
 		try {
-			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID "
-					+ "FROM movielens.ratings_testset_"+previous+";");
-			
 			HashSet<Integer> set0 = new HashSet<Integer>();
-			int id0 = 0;
-			while(rs0.next()) {
-				id0 = rs0.getInt(1);
-				set0.add(id0);
-				System.out.println("read previous set: "+id0);
+			String dir = fileDir + "ratings_testset_"+previous+".testset";
+			
+			BufferedReader reader = new BufferedReader(new FileReader(dir));
+			String inputLine = null; String pair[] = null;
+			while ((inputLine = reader.readLine()) != null){
+				pair = inputLine.split(",");
+				if(pair==null) continue;
+				
+				set0.add(Integer.parseInt(pair[0]));
 			}
-			rs0.close();
+			reader.close();
 			
-			ResultSet rs1 = this.db.getStmt().executeQuery("SELECT ID "
-					+ "FROM movielens.ratings_testset_"+now+";");
 			
+					
 			HashSet<Integer> set1 = new HashSet<Integer>();
-			int id1 = 0;
-			while(rs1.next()) {
-				id1 = rs1.getInt(1);
-				set1.add(id1);
-				System.out.println("read now set: "+id1);
+			String dir1 = fileDir + "ratings_testset_"+now+".testset";
+			
+			BufferedReader reader1 = new BufferedReader(new FileReader(dir1));
+			String inputLine1 = null; String pair1[] = null;
+			while ((inputLine1 = reader1.readLine()) != null){
+				pair1 = inputLine1.split(",");
+				if(pair1==null) continue;
+				
+				set1.add(Integer.parseInt(pair1[0]));
 			}
-			rs1.close();
+			reader1.close();
+					
 			
 			boolean isCorrect = true;
 			Iterator<Integer> itr = set0.iterator();
 			while(itr.hasNext()) {
 				if(!set1.contains(itr.next())) {
-					System.out.println("!!!!!");
 					isCorrect = false;
 				}
 			}
@@ -411,18 +399,116 @@ public class MovieLensDataset {
 		loadInitialDataset_into_DB();
 		
 		//2. make test data set (0.2)
-		makeTestDataSet(0.2);
+		//makeTestDataSet("movielens", 0.2);
 		
 		//3. make cummulated dataSet (0.4, 0.6, 0.8)
-		makeCumulatedDataSet(0.2, 0.4);
-		makeCumulatedDataSet(0.4, 0.6);
-		makeCumulatedDataSet(0.6, 0.8);
 		
 		//4. Verify
-		verify(20, 40);
-		verify(40, 60);
-		verify(60, 80);
+	//	verify(20, 40);
+		//verify(40, 60);
+	//	verify(60, 80);
 		
+	}
+	
+	
+		
+	public void loadTrain_Test_Dataset_Into_DB(String fileDir, String schema, double testsetRatio) {
+		try {
+			
+			int ratio = (int)(testsetRatio * 100);
+			String dir = fileDir + "ratings_testset_"+ratio+".testset";
+			
+			// 0. Delete existing data from DB
+			this.db.getStmt().executeUpdate("DELETE FROM `"+schema+"`.`ratings_trainset`;");
+			this.db.getStmt().executeUpdate("DELETE FROM `"+schema+"`.`ratings_testset`;");
+			
+			
+			// 1. Read all ratings into training datasetDB
+			loadRatings_into_DB(schema, true);
+			
+			
+			// 2. Read test set
+			BufferedReader reader = new BufferedReader(new FileReader(dir));
+			String inputLine = null; String pair[] = null;
+			int id; int userID; int itemID; double rating; int timeStamp;
+			while ((inputLine = reader.readLine()) != null){
+				pair = inputLine.split(",");
+				if(pair==null) continue;
+				
+				id = Integer.parseInt(pair[0]);
+				userID = Integer.parseInt(pair[1]);
+				itemID = Integer.parseInt(pair[2]);
+				rating = Double.parseDouble(pair[3]);
+				timeStamp = Integer.parseInt(pair[4]);
+				
+			// 3. Delete testset from training set and Write testset onto the testset DB
+				this.db.getStmt().executeUpdate("DELETE FROM `"+schema+"`.`ratings_trainset` "
+						+ "WHERE `ID`='"+id+"';");
+				
+				this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset` (`ID`, `userID`, `itemID`, `actual_rating`, `timestamp`) "
+						+ "VALUES ('"+id+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timeStamp+"');");
+			}
+			reader.close();
+			
+			
+		}catch(Exception e){
+			System.err.println("loadTrain_Test_Dataset_Into_DB error: "+e.getMessage());
+		}
+	}
+	
+	
+	
+	public void load_userAverage_Into_DB(String schema) {
+		try {
+			ArrayList<Integer> users = new ArrayList<Integer>();
+			ArrayList<UserAvg> avgList = new ArrayList<UserAvg>();
+			
+			// 0. DB로부터 모든 사용자들의 ID를 불러온다.
+			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID FROM "+schema+".users;");
+			while(rs0.next()) {
+				users.add(rs0.getInt(1));
+			}
+			rs0.close();
+			
+			
+			// 1. training set DB로부터 각 사용자별로 Rating 값들을 구한후 이들의 평균을 계산하여 메모리에 저장한다.
+			int n = users.size();
+			int userID;
+			for(int i=0; i < n; i++) {
+				userID = users.get(i);
+				
+				ResultSet rs1 = this.db.getStmt().executeQuery("SELECT rating FROM "+schema+".ratings_trainset where userID = "+userID+";");
+				double sum = 0; int num = 0; double avg=0;
+				while(rs1.next()) {
+					sum += rs1.getDouble(1);
+					num++;
+				}
+				if(num==0) avg = -1;
+				else avg = sum/(double)num;
+						
+				avgList.add(new UserAvg(userID, avg, num, sum));
+				rs1.close();
+				System.out.println("\t-- User "+userID+"'s average: "+avg);
+			}
+			
+			
+			// 2. 각 사용자별로 구한 평균값들을 DB에 캐싱한다.
+			n = avgList.size();
+			UserAvg avgNode = null;
+			
+			this.db.getStmt().executeUpdate("delete FROM "+schema+".user_avg;"); // 기존에 캐싱되어 있는 값은 모두 지운다.
+			
+			for(int i=0; i < n; i++) {
+				avgNode = avgList.get(i);
+				
+				this.db.getStmt().executeUpdate("INSERT INTO `"+schema+"`.`user_avg` (`userID`, `average`, `numOfRating`, `sumOfRating`) "
+						+ "VALUES ('"+avgNode.userID+"', '"+avgNode.average+"', '"+avgNode.numOfRating+"', '"+avgNode.sumOfRating+"');");
+			}
+			System.out.println("\t-- User average caching is completed.");
+			
+		}catch(Exception e){
+			System.err.println("load_userAverage_Into_DB error: "+e.getMessage());
+		}
 	}
 }
 
@@ -458,5 +544,21 @@ class UserInfo{
 		this.sumOFRatings = sumOFRatings;
 		this.numOfRatings = numOfRatings;
 		this.avg = avg;
+	}	
+}
+
+
+class UserAvg{
+	public int userID;
+	public double average;
+	public int numOfRating;
+	public double sumOfRating;
+	
+	public UserAvg(int userID, double average, int numOfRating, double sumOfRating) {
+		super();
+		this.userID = userID;
+		this.average = average;
+		this.numOfRating = numOfRating;
+		this.sumOfRating = sumOfRating;
 	}	
 }
