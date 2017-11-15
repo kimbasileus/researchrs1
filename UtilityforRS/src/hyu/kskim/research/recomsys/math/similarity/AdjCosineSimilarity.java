@@ -10,20 +10,20 @@ public class AdjCosineSimilarity{
 	DBManager db = new DBManager(null, null, null);
 	public final int inf = -1;
 	
-	
-	public AdjCosineSimilarity(double userAvg[], int numOfUsers) {
+	public AdjCosineSimilarity() {
 		this.db.connectDB("root", "kyungsookim");
 	}
 	
 	
-	public Hashtable<Integer, Double> loadUserSimListFromDB(String schemaName) { // schemaName = movielens
+	public double[] loadUserSimListFromDB(int numOfUsers, String schemaName) { // schemaName = movielens
 		try {
-			Hashtable<Integer, Double> userAvgList = new Hashtable<Integer, Double>();
+			double userAvgList[] = new double[numOfUsers+1];
 			String sql = "SELECT userID, average FROM "+schemaName+".user_avg;";
 			
 			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
+			userAvgList[0] = -1;
 			while(rs0.next()) {
-				userAvgList.put(rs0.getInt(1), rs0.getDouble(2));
+				userAvgList[rs0.getInt(1)] = rs0.getInt(2);
 			}
 			rs0.close();
 			
@@ -34,6 +34,22 @@ public class AdjCosineSimilarity{
 		}
 	}
 
+	
+	public ArrayList<IndexPair> getItemVector_as_List(int itemID){
+		try {
+			
+			
+			
+			
+			
+			ArrayList<IndexPair> list = new ArrayList<IndexPair>();
+						
+			return list;
+		}catch(Exception e) {
+			System.err.println("getItemVector_as_List exception: "+e.getMessage());
+			return null;
+		}
+	}
 	
 	public double getSimilarity(double[] x, double[] y) {
 		int len = x.length;
@@ -53,4 +69,15 @@ public class AdjCosineSimilarity{
 	
 	
 	
+}
+
+
+class IndexPair{
+	public int index;
+	public double value;
+	
+	public IndexPair(int index, double value) {
+		this.index = index;
+		this.value = value;
+	}
 }
