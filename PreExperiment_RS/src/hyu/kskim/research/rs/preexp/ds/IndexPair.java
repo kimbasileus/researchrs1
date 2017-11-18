@@ -14,7 +14,7 @@ public class IndexPair{
 	}
 	
 	@Override
-	public int hashCode() {
+	public int hashCode() { 
 		return (Integer.toString(row)+","+Integer.toString(col)).hashCode();
 	}
 	

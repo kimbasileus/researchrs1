@@ -27,13 +27,19 @@ public class Matrix implements SparseMatrix{
 	@Override
 	public double getRating(int i, int j) {
 		// TODO Auto-generated method stub
-		return this.list.get(new IndexPair(i, j));
+		IndexPair key = new IndexPair(i, j);
+		if(this.list.containsKey(key)) return this.list.get(key);
+		else return -1;
 	}
 
 	@Override
-	public double removeRating(int i, int j) {
+	public boolean removeRating(int i, int j) {
 		// TODO Auto-generated method stub
-		return this.list.remove(new IndexPair(i, j));
+		IndexPair key = new IndexPair(i, j);
+		if(this.list.containsKey(key)) {
+			this.list.remove(key);
+			return true;
+		}else return false;
 	}
 
 	@Override

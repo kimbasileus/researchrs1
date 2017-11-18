@@ -12,10 +12,10 @@ public class ISTPair_ADC {
 	public double D;
 	public double E;
 	public double F;
-	public double G;
+	public int G;
 	public double sim;
 	
-	public ISTPair_ADC(int item1ID, int item2ID, double a, double b, double c, double d, double e, double f, double sim) {
+	public ISTPair_ADC(int item1ID, int item2ID, double a, double b, double c, double d, double e, double f, int g, double sim) {
 		super();
 		this.item1ID = item1ID;
 		this.item2ID = item2ID;
@@ -25,6 +25,7 @@ public class ISTPair_ADC {
 		D = d;
 		E = e;
 		F = f;
+		G = g;
 		this.sim = sim;
 	}
 }

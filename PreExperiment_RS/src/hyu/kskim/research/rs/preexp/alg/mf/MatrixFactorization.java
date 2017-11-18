@@ -14,8 +14,12 @@ public class MatrixFactorization {
 	int numOfItems = 8; 
 	int rank = 2; // Rank of R
 	
-	public MatrixFactorization(String dbSchema) {
-		R = new UserRatingMatrix_hashTable(dbSchema);
+	public MatrixFactorization(String dbSchema, int numOfUsers, int numOfItems, int rank) {
+		R = new UserRatingMatrix_hashTable(dbSchema, numOfUsers, numOfItems);
+		this.numOfUsers = numOfUsers;
+		this.numOfItems = numOfItems;
+		this.rank = rank;
+		
 		this.P = new Matrix(numOfUsers, rank);
 		this.Q = new Matrix(numOfItems, rank);
 	}

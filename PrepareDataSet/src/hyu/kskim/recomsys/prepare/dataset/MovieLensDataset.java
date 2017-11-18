@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -19,6 +20,8 @@ public class MovieLensDataset {
 	String dbPw = "kyungsookim";
 	DBManager db = new DBManager(null, null, null);
 	FileIO file = new FileIO();
+	
+	ArrayList<RatingInfo> itemList = new ArrayList<RatingInfo>();
 	
 	int numOfUsers;
 	int numOfItems;
@@ -41,15 +44,15 @@ public class MovieLensDataset {
 		this.db.closeDB();
 	}
 	
-	public void loadInitialDataset_into_DB() {
-		this.loadRatings_into_DB(this.schema, false);
+	public void loadInitialDataset_into_DB() {		
+		this.loadRatings_into_DB(this.schema);
 		this.loadUsers_into_DB(this.schema);
 		this.loadItems_into_DB(this.schema);
-		this.loadMovieLinkData_into_ItemDB(this.schema);
+		this.loadMovieURLData_into_ItemDB(this.schema);
+		this.changeItemID(this.schema);
 	}
-
 	
-	public void loadRatings_into_DB(String schema, boolean isTrainSet) {  // If the table is trainset, tableName=ratings_trainset
+	public void loadRatings_into_DB(String schema) {  // If the table is trainset, tableName=ratings_trainset
 		String dir = path+"\\ratings.csv";
 		try{
 			BufferedReader reader = new BufferedReader(new FileReader(dir));
@@ -75,13 +78,9 @@ public class MovieLensDataset {
 				 System.out.println("["+count+"] \t"+userID+"\t"+itemID+"\t"+rating+"\t"+timestamp);
 				 
 				 String sql = null;
-			     if(!isTrainSet) // default ratings table
-					 sql = "INSERT INTO `"+schema+"`.`ratings` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
+			     sql = "INSERT INTO `"+schema+"`.`ratings` (`ID`, `userID`, `movielensID`, `rating`, `timestamp`) "
 							+ "VALUES ('"+count+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timestamp+"');";
-			     else // ratings_trainset
-			    	 sql = "INSERT INTO `"+schema+"`.`ratings_trainset` (`ID`, `userID`, `itemID`, `rating`, `timestamp`) "
-								+ "VALUES ('"+count+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timestamp+"');";
-					
+			   
 				 db.getStmt().executeUpdate(sql);
 				 
 			 }
@@ -164,7 +163,7 @@ public class MovieLensDataset {
 				 count++;
 				 System.out.println("["+count+"] \t"+movieID+"\t"+title+"\t"+genres);
 				 
-				 String sql = "INSERT INTO `"+schema+"`.`items` (`ID`, `movieID`, `name`, `genres`) "
+				 String sql = "INSERT INTO `"+schema+"`.`items` (`ID`, `movielensID`, `name`, `genres`) "
 				 				+ "VALUES ('"+count+"', '"+movieID+"', '"+title+"', '"+genres+"');";
 				 
 				 db.getStmt().executeUpdate(sql);
@@ -179,7 +178,7 @@ public class MovieLensDataset {
 	
 	
 	
-	public void loadMovieLinkData_into_ItemDB(String schema) {
+	public void loadMovieURLData_into_ItemDB(String schema) {
 		String dir = path+"\\links.csv";
 		try{
 			 BufferedReader reader = new BufferedReader(new FileReader(dir));
@@ -211,17 +210,54 @@ public class MovieLensDataset {
 				 System.out.println("["+count+"] \t"+movieID+"\t"+imdbID+"\t"+tmdbID);
 				 
 				 String sql = "UPDATE `"+schema+"`.`items` "
-							+ "SET `imdbID`='"+imdbID+"', `tmdbID`='"+tmdbID+"' WHERE `movieID`='"+movieID+"';";
+							+ "SET `imdbID`='"+imdbID+"', `tmdbID`='"+tmdbID+"' WHERE `movielensID`='"+movieID+"';";
 				 db.getStmt().executeUpdate(sql);
 				
 			 }
 			 reader.close();
 			 
 		}catch(Exception e){
-			System.err.println("loadMovieLinkData_into_ItemDB error: "+e.getMessage());
+			System.err.println("loadMovieURLData_into_ItemDB error: "+e.getMessage());
 		}
 	}
 	
+	
+	public void changeItemID(String schema) {
+		try {
+			          //MovieLensID, New ID
+			Hashtable<Integer, Integer> map = new Hashtable<Integer, Integer>();
+			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID, movielensID  FROM "+schema+".items;");
+			while(rs0.next()) {
+				map.put(rs0.getInt(2), rs0.getInt(1));
+			}
+			rs0.close();
+			
+			Enumeration<Integer> mId = map.keys();
+			
+			int count = 0;
+			while(mId.hasMoreElements()) {
+				int movielensID = mId.nextElement();
+				int newID = map.get(movielensID);
+				
+				String sql = "UPDATE `"+schema+"`.`ratings` SET `itemID`='"+newID+"' WHERE `movielensID`='"+movielensID+"';";
+				this.db.getStmt().executeUpdate(sql);
+				
+				count++;
+				System.out.println("["+count+"] "+movielensID+" --> "+newID);
+			}
+		}catch(Exception e){
+			System.err.println("changeItemID error: "+e.getMessage());
+		}
+	}
+	
+	
+	public void deleteAll(String schema) {
+		try {
+			
+		}catch(Exception e){
+			System.err.println("deleteAll error: "+e.getMessage());
+		}
+	}
 	
 	
 	public void makeTestDataSet(String fileDir, String schema, double ratioOfTestRatings) {
@@ -239,25 +275,26 @@ public class MovieLensDataset {
 			Iterator<Integer> itr = testItemList.iterator();
 			
 			int n = numOfTestRatings;
-			int id = 0; int userNo; int itemNo; double rating; int timeStamp;
+			int id = 0; int userNo; int itemNo; int mNo; double rating; int timeStamp;
 			
 			StringBuffer sb = new StringBuffer();
 			ResultSet rs = null;
 			while(itr.hasNext()) {
 				id = itr.next();
 				
-				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp "
+				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, movielensID, rating, timestamp "
 						+ "FROM `"+schema+"`.`ratings` where ID = "+id+";");
 				
 				while(rs.next()) {
 					userNo = rs.getInt(1);
 					itemNo = rs.getInt(2);
-					rating = rs.getDouble(3);
-					timeStamp = rs.getInt(4);
+					mNo = rs.getInt(3);
+					rating = rs.getDouble(4);
+					timeStamp = rs.getInt(5);
 					
-					System.out.println(id+","+userNo+","+itemNo+","+rating+","+timeStamp);
+					System.out.println(id+","+userNo+","+itemNo+","+mNo+","+rating+","+timeStamp);
 					
-					sb.append(id+","+userNo+","+itemNo+","+rating+","+timeStamp).append("\n");
+					sb.append(id+","+userNo+","+itemNo+","+mNo+","+rating+","+timeStamp).append("\n");
 				}
 			}
 			
@@ -311,7 +348,7 @@ public class MovieLensDataset {
 			testItemList = rn.getNCummulatedRandomNumbers_Set(1, this.numOfRatings, numOfTestRatings, testItemList);
 			Iterator<Integer> itr = testItemList.iterator();
 			
-			int id = 0; int userNo; int itemNo; double rating; int timeStamp;
+			int id = 0; int userNo; int itemNo; int mNo; double rating; int timeStamp;
 			ArrayList<testSetPair> extractedList = new ArrayList<testSetPair>();
 			
 			StringBuffer sb = new StringBuffer();
@@ -319,18 +356,19 @@ public class MovieLensDataset {
 			while(itr.hasNext()) {
 				id = itr.next();
 				
-				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, rating, timestamp "
+				rs = this.db.getStmt().executeQuery("SELECT userID, itemID, movielensID, rating, timestamp "
 						+ "FROM `"+schema+"`.`ratings` where ID = "+id+";");
 				
 				while(rs.next()) {
 					userNo = rs.getInt(1);
 					itemNo = rs.getInt(2);
-					rating = rs.getDouble(3);
-					timeStamp = rs.getInt(4);
+					mNo = rs.getInt(3);
+					rating = rs.getDouble(4);
+					timeStamp = rs.getInt(5);
 					
-					System.out.println(id+","+userNo+","+itemNo+","+rating+","+timeStamp);
+					System.out.println(id+","+userNo+","+itemNo+","+mNo+","+rating+","+timeStamp);
 					
-					sb.append(id+","+userNo+","+itemNo+","+rating+","+timeStamp).append("\n");
+					sb.append(id+","+userNo+","+itemNo+","+mNo+","+rating+","+timeStamp).append("\n");
 				}
 			}
 			
@@ -423,14 +461,15 @@ public class MovieLensDataset {
 			this.db.getStmt().executeUpdate("DELETE FROM `"+schema+"`.`ratings_testset`;");
 			
 			
-			// 1. Read all ratings into training datasetDB
-			loadRatings_into_DB(schema, true);
+			// 1. Read all ratings into training datasetDB (ArrayList<RatingInfo> itemList>
+			loadAllRating_For_makeTratingSet(schema);
 			
+			//System.exit(0);
 			
 			// 2. Read test set
 			BufferedReader reader = new BufferedReader(new FileReader(dir));
 			String inputLine = null; String pair[] = null;
-			int id; int userID; int itemID; double rating; int timeStamp;
+			int id; int userID; int itemID; int mID; double rating; int timeStamp;
 			while ((inputLine = reader.readLine()) != null){
 				pair = inputLine.split(",");
 				if(pair==null) continue;
@@ -438,15 +477,16 @@ public class MovieLensDataset {
 				id = Integer.parseInt(pair[0]);
 				userID = Integer.parseInt(pair[1]);
 				itemID = Integer.parseInt(pair[2]);
-				rating = Double.parseDouble(pair[3]);
-				timeStamp = Integer.parseInt(pair[4]);
+				mID = Integer.parseInt(pair[3]);
+				rating = Double.parseDouble(pair[4]);
+				timeStamp = Integer.parseInt(pair[5]);
 				
 			// 3. Delete testset from training set and Write testset onto the testset DB
 				this.db.getStmt().executeUpdate("DELETE FROM `"+schema+"`.`ratings_trainset` "
 						+ "WHERE `ID`='"+id+"';");
 				
-				this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset` (`ID`, `userID`, `itemID`, `actual_rating`, `timestamp`) "
-						+ "VALUES ('"+id+"', '"+userID+"', '"+itemID+"', '"+rating+"', '"+timeStamp+"');");
+				this.db.getStmt().executeUpdate("INSERT INTO `movielens`.`ratings_testset` (`ID`, `userID`, `itemID`, `movielensID`, `actual_rating`, `timestamp`) "
+						+ "VALUES ('"+id+"', '"+userID+"', '"+itemID+"', '"+mID+"', '"+rating+"', '"+timeStamp+"');");
 			}
 			reader.close();
 			
@@ -457,7 +497,65 @@ public class MovieLensDataset {
 	}
 	
 	
+	public void loadAllRating_For_makeTratingSet(String schema) {
+		try {
+			for(int itemID=1; itemID<=this.numOfItems; itemID++) {
+				this.loadAllRating_For_makeTratingSet_From_Item(schema, itemID, 0);
+			}
+			
+			System.out.println("Original Rating Data is loaded: size is "+this.itemList.size());
+			
+			
+			int n = this.itemList.size();
+			RatingInfo node = null;
+			for(int i=0; i < n ; i++) {
+				node = this.itemList.get(i);
+				String sql = "INSERT INTO `"+schema+"`.`ratings_trainset` (`ID`, `userID`, `itemID`, `movielensID`, `rating`, `timestamp`) "
+						+ "VALUES ('"+node.id+"', '"+node.userID+"', '"+node.itemID+"', '"+node.movielensID+"', '"+node.rating+"', '"+node.timestamp+"');";
+				this.db.getStmt().executeUpdate(sql);
+				
+				System.out.println((i+1)+"번째 rating을 trainset에 삽입 완료.");
+			}
+			
+		}catch(Exception e){
+			System.err.println("loadAllRating_For_makeTratingSet error: "+e.getMessage());
+		}
+	}
 	
+	private void loadAllRating_For_makeTratingSet_From_Item(String schema, int itemID, int method) {
+		try {
+			String sql = null;
+			if(method==0)
+				sql = "SELECT * FROM "+schema+".ratings where itemID = '"+itemID+"';";
+			else if(method==1)
+				sql = "SELECT * FROM "+schema+".ratings_trainset where itemID = '"+itemID+"';";
+			else if(method==2)
+				sql = "SELECT * FROM "+schema+".ratings_testset where itemID = '"+itemID+"';";
+			else
+				sql = "SELECT * FROM "+schema+".ratings where itemID = '"+itemID+"';";
+			
+			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
+			int id; int userID; int itemId; int movielensID; double rating; int timestamp;
+			while(rs0.next()) {
+				id = rs0.getInt(1);
+				userID = rs0.getInt(2);
+				itemId = rs0.getInt(3);
+				movielensID = rs0.getInt(4);
+				rating = rs0.getDouble(5);
+				timestamp = rs0.getInt(6);
+				
+				this.itemList.add(new RatingInfo(id, userID, itemId, movielensID, rating, timestamp));
+ 			}
+			System.out.println("  아이템 "+itemID+" 에 대한 rating 정보 메모리 로딩 완료.");
+			rs0.close();
+		}catch(Exception e){
+			System.err.println("loadAllRating_For_makeTratingSet_From_Item error: "+e.getMessage());
+		}
+	}
+	
+	
+	
+
 	public void load_userAverage_Into_DB(String schema) {
 		try {
 			ArrayList<Integer> users = new ArrayList<Integer>();
@@ -474,7 +572,7 @@ public class MovieLensDataset {
 			// 1. training set DB로부터 각 사용자별로 Rating 값들을 구한후 이들의 평균을 계산하여 메모리에 저장한다.
 			int n = users.size();
 			int userID;
-			for(int i=0; i < n; i++) {
+			for(int i=0; i < n; i++) { // User ID
 				userID = users.get(i);
 				
 				ResultSet rs1 = this.db.getStmt().executeQuery("SELECT rating FROM "+schema+".ratings_trainset where userID = "+userID+";");
@@ -508,6 +606,106 @@ public class MovieLensDataset {
 			
 		}catch(Exception e){
 			System.err.println("load_userAverage_Into_DB error: "+e.getMessage());
+		}
+	}
+	
+	
+	
+	
+	
+	
+	public void verify_itemIDs(String schema, int method, boolean isBasedItem) {
+		          // movielensID, newID
+		Hashtable<Integer, Integer> itemIDs = new Hashtable<Integer, Integer>();
+		try {
+			this.itemList.clear();
+			
+			String sql = "SELECT ID, movielensID FROM "+schema+".items;";
+			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
+			int newID; int movielensID;
+			while(rs0.next()) {
+				movielensID = rs0.getInt(2);
+				newID = rs0.getInt(1);
+				
+				itemIDs.put(movielensID, newID);
+			}
+			rs0.close();
+			
+			System.out.println("1. Movielens ID and new ID 로딩 완료: the number of keys is "+itemIDs.size());
+			System.out.println("------------");
+			
+			if(!isBasedItem) { // User-based
+				for(int uID=1; uID<=this.numOfUsers; uID++) {
+					this.loadAllRating_For_makeTratingSet_From_User(schema, uID, method);
+				}
+			}else { // Item-based
+				for(int iID=1; iID<=this.numOfItems; iID++) {
+					this.loadAllRating_For_makeTratingSet_From_Item(schema, iID, method);
+				}
+			}
+			
+			System.out.println("2. Complete loading ratings from method "+method+": size is "+this.itemList.size());
+			System.out.println("------------");
+			
+			int n = this.itemList.size();
+			RatingInfo node = null;
+			int numOfCorrect=0; int numOfIncorrect=0;
+			
+			for(int i=0; i < n ; i++) {
+				node = this.itemList.get(i);
+				
+				//int ID = node.id;
+				movielensID = node.movielensID;
+				newID = node.itemID;
+				
+				if(itemIDs.containsKey(movielensID) && itemIDs.get(movielensID) == newID) {
+					numOfCorrect++;
+					System.out.println("["+(i+1)+"] MovielensID "+movielensID+" --> newID "+newID+" : Correct.");
+				}else {
+					numOfIncorrect++;
+					System.out.println("["+(i+1)+"] MovielensID "+movielensID+" --> newID "+newID+" : InCorrect.------- InCorrect.");
+				}
+			}
+			
+			System.out.println("3. Complete loading ratings from method "+method+": size is "+this.itemList.size());
+			System.out.println("\t - The number of correct ratings is "+numOfCorrect);
+			System.out.println("\t - The number of incorrect ratings is "+numOfIncorrect);
+			System.out.println("\t - The total number of ratings is "+(numOfCorrect+numOfIncorrect) );
+			System.out.println("------------");
+		}catch(Exception e){
+			System.err.println("verity_itemIDs error: "+e.getMessage());
+		}
+	}
+	
+	
+	private void loadAllRating_For_makeTratingSet_From_User(String schema, int userID, int method) {
+		try {
+			String sql = null;
+			if(method==0)
+				sql = "SELECT * FROM "+schema+".ratings where userID = '"+userID+"';";
+			else if(method==1)
+				sql = "SELECT * FROM "+schema+".ratings_trainset where userID = '"+userID+"';";
+			else if(method==2)
+				sql = "SELECT * FROM "+schema+".ratings_testset where userID = '"+userID+"';";
+			else
+				sql = "SELECT * FROM "+schema+".ratings where userID = '"+userID+"';";
+			
+			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
+			int id; int uID=0; int itemId; int movielensID; double rating; int timestamp;
+			while(rs0.next()) {
+				id = rs0.getInt(1);
+				uID = rs0.getInt(2);
+				itemId = rs0.getInt(3);
+				movielensID = rs0.getInt(4);
+				rating = rs0.getDouble(5);
+				timestamp = rs0.getInt(6);
+				
+				this.itemList.add(new RatingInfo(id, uID, itemId, movielensID, rating, timestamp));
+ 			}
+			System.out.println("  사용자 "+userID+" 에 대한 rating 정보 메모리 로딩 완료.");
+			rs0.close();
+		}catch(Exception e){
+			System.err.println("loadAllRating_For_makeTratingSet_From_User error: "+e.getMessage());
 		}
 	}
 }
@@ -561,4 +759,23 @@ class UserAvg{
 		this.numOfRating = numOfRating;
 		this.sumOfRating = sumOfRating;
 	}	
+}
+
+class RatingInfo{
+	public int id;
+	public int userID;
+	public int itemID;
+	public int movielensID;
+	public double rating;
+	public int timestamp;
+	
+	public RatingInfo(int no, int userID, int itemID, int movielensID, double rating, int timestamp) {
+		super();
+		id = no;
+		this.userID = userID;
+		this.itemID = itemID;
+		this.movielensID = movielensID;
+		this.rating = rating;
+		this.timestamp = timestamp;
+	}
 }
