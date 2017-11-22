@@ -29,7 +29,7 @@ public class MakeInitialIST {
 	int numOfItems = 0; // 9125
 	int numOfUsers = 0; // 671
 	
-	double threshold = 0.3; // 아이템 유사도의 임계값 (기본값 0.3)
+	double threshold = -1; // 아이템 유사도의 임계값 (기본값 0.3)
 	
 	public MakeInitialIST(String dbSchema, int numOfUsers, int numOfItems, double sim_threshold) {
 		
@@ -159,8 +159,88 @@ public class MakeInitialIST {
 	}
 	
 	
+	
+	
 	// 두 아이템 간의 유사도를 계산하는 함수 (Adjusted Cosine Similarity)
-	public ISTPair_ADC getSim_ADC(int item1ID, int item2ID, double[] userAvg, double threshold) {
+		public ISTPair_ADC getSim_ADC(int item1ID, int item2ID, double[] userAvg, double threshold) {
+			try {
+				ISTPair_ADC pair = null;
+				
+				int n1 = this.itemList[item1ID].length;
+				int n2 = this.itemList[item2ID].length;
+				
+				if(n1==0 || n2==0) return null;
+				
+				int i =0; int j=0;
+				
+				double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; int numOfCommonRatings=0;
+				double x = 0; double y=0; int u1;
+				do {
+					while(i<n1 && j<n2 && (itemList[item1ID][i].index < itemList[item2ID][j].index) ) {
+						i++;
+					}
+					while(i<n1 && j<n2 && (itemList[item1ID][i].index > itemList[item2ID][j].index) ) { 
+						j++;
+					}
+					
+					// Computation Part......
+					if( (i<n1 && j<n2) &&  itemList[item1ID][i].index==itemList[item2ID][j].index) {
+						x = itemList[item1ID][i].value;
+						y = itemList[item2ID][j].value;
+						
+						u1 = itemList[item1ID][i].index;
+						
+						A += x*y;
+						B += x*userAvg[u1];
+						C += y*userAvg[u1];
+						D += userAvg[u1]*userAvg[u1];
+						E += x*x;
+						F += y*y;	
+						numOfCommonRatings++;
+						
+						i++; j++;
+					//	System.out.println(userAvg[u1]);					
+					}
+					
+				}while(i < n1 && j < n2);
+				
+				if(numOfCommonRatings < 5) return null;
+				//this.threshold = 0.3;
+				
+				double L1 = E-2*B+D;
+				double L2 = F-2*C+D;
+				
+				if(L1<=0 || L2<=0) return null;
+				
+				L1 = Math.sqrt(L1);
+				L2 = Math.sqrt(L2);
+				
+				double H = A-B-C+D;
+				double sim = H/(L1*L2);
+				sim = Math.round(sim*100000000.0)/100000000.0; // 소수점 여덟째 자리에서 반올림한다.
+				
+				//System.out.println("ADC1: <"+item1ID+", "+item2ID+"> sim: "+sim);
+				
+				if(sim < threshold) return null;
+				
+				if(sim > 1 && sim < 1.1) sim = 1.0;
+				
+				pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, numOfCommonRatings, sim);
+				
+				System.out.println("ADC1: <"+item1ID+", "+item2ID+"> sim: "+sim);
+				
+				return pair;
+			} catch (Exception e) {
+				System.err.println("getSim_ADC Exception: "+e.getMessage()+" // "+e.getStackTrace());
+				return null;
+			}
+		}
+	
+	
+		
+	
+	// 두 아이템 간의 유사도를 계산하는 함수 (Adjusted Cosine Similarity)
+	public ISTPair_ADC getSim_ADC_Previous(int item1ID, int item2ID, double[] userAvg, double threshold) {
 		try {
 			ISTPair_ADC pair = null;
 			
@@ -174,8 +254,15 @@ public class MakeInitialIST {
 			double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; int numOfCommonRatings=0;
 			double x = 0; double y=0; int u1;
 			do {
-				while(i<n1 && j<n2 && (itemList[item1ID][i].index < itemList[item2ID][j].index) ) i++;
-				while(i<n1 && j<n2 && (itemList[item1ID][i].index > itemList[item2ID][j].index) ) j++;
+				while(i<n1 && j<n2 && (itemList[item1ID][i].index < itemList[item2ID][j].index) ) {
+										
+					i++;
+				}
+				while(i<n1 && j<n2 && (itemList[item1ID][i].index > itemList[item2ID][j].index) ) { 
+					
+					
+					j++;
+				}
 				
 				// Computation Part......
 				if( (i<n1 && j<n2) &&  itemList[item1ID][i].index==itemList[item2ID][j].index) {
