@@ -36,8 +36,8 @@ public class Main {
 		ibc.closeItemBasedCF();
 		*/
 		
-		ExperimentInterface ei = new ExperimentInterface(671, 9125, 20);
-		ei.initializeDB("movielens", "root", "kyungsookim", "");
+		ExperimentInterface ei = new ExperimentInterface(671, 9125, 0.2);
+		ei.initializeDB("movielens", "root", "kyungsookim", "", 101);
 		ei.loadTestSets();
 		ei.run();
 		

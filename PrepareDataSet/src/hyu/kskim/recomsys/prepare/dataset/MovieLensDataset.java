@@ -511,7 +511,7 @@ public class MovieLensDataset {
 			for(int i=0; i < n ; i++) {
 				node = this.itemList.get(i);
 				String sql = "INSERT INTO `"+schema+"`.`ratings_trainset` (`ID`, `userID`, `itemID`, `movielensID`, `rating`, `timestamp`) "
-						+ "VALUES ('"+node.id+"', '"+node.userID+"', '"+node.itemID+"', '"+node.movielensID+"', '"+node.rating+"', '"+node.timestamp+"');";
+						+ "VALUES ('"+node.id+"', '"+node.userID+"', '"+node.itemID+"', '"+node.oldItemID+"', '"+node.rating+"', '"+node.timestamp+"');";
 				this.db.getStmt().executeUpdate(sql);
 				
 				System.out.println((i+1)+"번째 rating을 trainset에 삽입 완료.");
@@ -655,7 +655,7 @@ public class MovieLensDataset {
 				node = this.itemList.get(i);
 				
 				//int ID = node.id;
-				movielensID = node.movielensID;
+				movielensID = node.oldItemID;
 				newID = node.itemID;
 				
 				if(itemIDs.containsKey(movielensID) && itemIDs.get(movielensID) == newID) {
@@ -761,21 +761,3 @@ class UserAvg{
 	}	
 }
 
-class RatingInfo{
-	public int id;
-	public int userID;
-	public int itemID;
-	public int movielensID;
-	public double rating;
-	public int timestamp;
-	
-	public RatingInfo(int no, int userID, int itemID, int movielensID, double rating, int timestamp) {
-		super();
-		id = no;
-		this.userID = userID;
-		this.itemID = itemID;
-		this.movielensID = movielensID;
-		this.rating = rating;
-		this.timestamp = timestamp;
-	}
-}

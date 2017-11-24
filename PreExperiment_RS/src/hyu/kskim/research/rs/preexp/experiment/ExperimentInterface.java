@@ -29,7 +29,9 @@ public class ExperimentInterface {
 	int numOfTestSets = 0;
 	int numOfTrainingSets = 0;
 	
-	ItemBasedCF ibc = new ItemBasedCF("movielens", 671, 9125, 30);
+	int methodID = 0;
+	
+	ItemBasedCF ibc = null;
 	
 	// 호출 1. 생성자
 	public ExperimentInterface(int numOfUsers, int numOfItems, double ratioOfTestSets) {
@@ -45,12 +47,14 @@ public class ExperimentInterface {
 	}
 	
 	// 호출 2. DB정보 세팅
-	public void initializeDB(String schema, String userName, String password, String dir_experiment_result) {
+	public void initializeDB(String schema, String userName, String password, String dir_experiment_result,
+			int methodID) {
 		try {
 			this.db = new DBManager(null, null, null);
 			this.db.connectDB(userName, password);
 			this.dbSchema = schema;
 			this.dir_experiment_result = dir_experiment_result;
+			this.methodID = methodID;
 		}catch(Exception e) {
 			
 		}
@@ -84,8 +88,13 @@ public class ExperimentInterface {
 	// 호출 4. 실험 진행 함수
 	public boolean run() {
 		try {
-			ibc.initRecommenderEngine();
-			
+			if(methodID == 101) { // Item-based CF
+				this.ibc = new ItemBasedCF("movielens", 671, 9125, 30);
+				ibc.initRecommenderEngine();
+			}else {
+				System.out.println("추천엔진 선택 불가!!");
+				return false;
+			}
 			
 			
 			int countTestItem = 0;
@@ -123,7 +132,7 @@ public class ExperimentInterface {
 					System.out.println(count+"]\t User "+testSet.userID+", item "+testSet.itemID+": rating "+predicted_rating);
 				}
 				
-				//if(count==7000) break;
+				if(count==7000) break;
 			}
 			
 			int numOfTotalTestSet = this.numOfTestSets; // 전체 테스트케이스의 수
@@ -132,8 +141,8 @@ public class ExperimentInterface {
 						
 			
 			System.out.println("전체 테스트 케이스 수: "+numOfTotalTestSet);
-			System.out.println("평점 예측에 성공한 테스트 케이스의 수: "+numOfPredictedTestSet);
-			System.out.println("평점 예측에 실패한 테스트 케이스의 수: "+numOfFailTestSet);
+			//System.out.println("평점 예측에 성공한 테스트 케이스의 수: "+numOfPredictedTestSet);
+			//System.out.println("평점 예측에 실패한 테스트 케이스의 수: "+numOfFailTestSet);
 			
 			this.analysisResults(numOfTotalTestSet);
 			return true;
@@ -147,15 +156,17 @@ public class ExperimentInterface {
 	// 호출 5. 실험 결과 분석 함수
 	public boolean analysisResults(int numOfTestSet) {
 		try {
+			String experimentTitle = "실험1_고전 ItembasedCF";
+			int experimentID = 1658;
+			
 			// 1. Setting
-			this.expAnalyzer = new ExperimentAnalyzer("KyungSoo Kim", numOfUsers, numOfItems, ratioOfTestSets, 1);
-			this.expAnalyzer.initDB(dbSchema, "root", "kyungsookim", "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small\\experiments\\");
+			this.expAnalyzer = new ExperimentAnalyzer(experimentTitle, numOfUsers, numOfItems, ratioOfTestSets, experimentID);
+			this.expAnalyzer.initDB(dbSchema, "root", "kyungsookim", "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small\\experiments");
 			this.expAnalyzer.settingExperimentInfo(numOfTestSet, testSuccessList, testFailList);
 			
 			
 			// 2. Analysis
 			this.expAnalyzer.computeBasicPerformance();
-			this.expAnalyzer.computeF1Performance();
 			
 			
 			// 3. Print result
