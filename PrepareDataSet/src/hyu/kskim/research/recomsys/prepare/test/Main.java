@@ -55,10 +55,34 @@ public class Main {
 		
 	//	mld.endMovieLensDataset(); // 소멸자
 		
-		EpinionsDataset ed = new EpinionsDataset("epinionsserver", 91735, 26527, 170797);
+		EpinionsDataset ed = new EpinionsDataset("epinionscom", 91735, 26527, 170452);
 		//ed.verify_itemIDs("epinionsserver", 2, true);
 		//ed.make_users_table();
 		//ed.make_usertrust_table();
-		ed.make_items_table();
+		//ed.make_items_table();
+		//ed.make_userRating_table();
+		//ed.make_itemnetwork_table();
+		
+		
+		// 2. 누적 TestSet 만들기
+		//"D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", "epinionscom", 0.2);
+		//ed.makeTestDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", "epinionscom", 0.2);
+		//ed.makeCumulatedDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 0.2, 0.3);
+		//ed.makeCumulatedDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 0.3, 0.4);
+		//ed.makeCumulatedDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 0.4, 0.5);
+		//ed.makeCumulatedDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 0.5, 0.6);
+		//ed.makeCumulatedDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 0.6, 0.7);
+		//ed.makeCumulatedDataSet("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 0.7, 0.8);
+		
+		//ed.verify("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 20, 30);
+		//ed.verify("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 30, 40);
+		//ed.verify("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 40, 50);
+		//ed.verify("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 50, 60);
+		//ed.verify("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 60, 70);
+		//ed.verify("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", 70, 80);
+		
+		//ed.loadTrain_Test_Dataset_Into_DB("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", "epinionscom", 0.2);
+	
+		ed.load_userAverage_Into_DB("epinionscom");
 	}
 }

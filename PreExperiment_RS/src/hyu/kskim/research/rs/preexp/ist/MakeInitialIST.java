@@ -26,8 +26,8 @@ public class MakeInitialIST {
 	DBManager db = null;
 	
 	
-	int numOfItems = 0; // 9125
-	int numOfUsers = 0; // 671
+	int numOfItems = 0; // 9125 (movielens)  /  26527 (epinionscom)
+	int numOfUsers = 0; // 671 (movielens)   /  91735 (epinionscom)
 	
 	double threshold = -1; // 아이템 유사도의 임계값 (기본값 0.3)
 	
@@ -53,6 +53,9 @@ public class MakeInitialIST {
 	// 주 실행 함수로 이 함수 하나만 실행하면 된다.
 	public void run(int testSetRatio) { // ratio =20, 30, 40
 		try {
+			// 0 기존의 캐싱되어 있던 IST 삭제
+			this.db.getStmt().execute("delete FROM "+this.dbSchema+".ist;");
+			
 			// 1. User-Item Rating을 Item Vector 타입으로 메모리로 로딩
 			for(int item=1; item <=numOfItems; item++) loadUserRatings_from_DB(item);
 						
@@ -146,9 +149,9 @@ public class MakeInitialIST {
 	
 	// 계산된 아이템 간의 유사도 및 유사도 계산에 사용된 Term들을 DB에 캐싱하는 함수
 	public void writeIST(ISTPair_ADC pair, int count, DBManager dm) {
-		String sql = "INSERT INTO `"+this.dbSchema+"`.`ist` (`ID`, `item1ID`, `item2ID`, `similarity`, `A`, `B`, `C`, `D`, `E`, `F`, `G`) "
+		String sql = "INSERT INTO `"+this.dbSchema+"`.`ist` (`ID`, `item1ID`, `item2ID`, `similarity`, `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`, `num`) "
 				+ "VALUES ('1', '"+pair.item1ID+"', '"+pair.item2ID+"', '"+pair.sim+"', "
-						+ "'"+pair.A+"', '"+pair.B+"', '"+pair.C+"', '"+pair.D+"', '"+pair.E+"', '"+pair.F+"', '"+pair.G+"');"; // userID에 대한 정렬 반드시 필요
+				+ "'"+pair.A+"', '"+pair.B+"', '"+pair.C+"', '"+pair.D+"', '"+pair.E+"', '"+pair.F+"', '"+pair.G+"', '"+pair.H+"', '"+pair.num+"');"; // userID에 대한 정렬 반드시 필요
 		
 		try {
 			dm.getStmt().addBatch(sql);
@@ -173,7 +176,8 @@ public class MakeInitialIST {
 				
 				int i =0; int j=0;
 				
-				double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; int numOfCommonRatings=0;
+				double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; double G=-1; double H=-1;
+				int numOfCommonRatings=0;
 				double x = 0; double y=0; int u1;
 				do {
 					while(i<n1 && j<n2 && (itemList[item1ID][i].index < itemList[item2ID][j].index) ) {
@@ -215,8 +219,8 @@ public class MakeInitialIST {
 				L1 = Math.sqrt(L1);
 				L2 = Math.sqrt(L2);
 				
-				double H = A-B-C+D;
-				double sim = H/(L1*L2);
+				double Upper = A-B-C+D;
+				double sim = Upper/(L1*L2);
 				sim = Math.round(sim*100000000.0)/100000000.0; // 소수점 여덟째 자리에서 반올림한다.
 				
 				//System.out.println("ADC1: <"+item1ID+", "+item2ID+"> sim: "+sim);
@@ -225,7 +229,7 @@ public class MakeInitialIST {
 				
 				if(sim > 1 && sim < 1.1) sim = 1.0;
 				
-				pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, numOfCommonRatings, sim);
+				pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, G, H, numOfCommonRatings, sim);
 				
 				System.out.println("ADC1: <"+item1ID+", "+item2ID+"> sim: "+sim);
 				
@@ -251,7 +255,8 @@ public class MakeInitialIST {
 			
 			int i =0; int j=0;
 			
-			double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; int numOfCommonRatings=0;
+			double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; double G=-1; double H=-1;
+			int numOfCommonRatings=0;
 			double x = 0; double y=0; int u1;
 			do {
 				while(i<n1 && j<n2 && (itemList[item1ID][i].index < itemList[item2ID][j].index) ) {
@@ -293,8 +298,8 @@ public class MakeInitialIST {
 			L1 = Math.sqrt(L1);
 			L2 = Math.sqrt(L2);
 			
-			double H = A-B-C+D;
-			double sim = H/(L1*L2);
+			double Upper = A-B-C+D;
+			double sim = Upper/(L1*L2);
 			sim = Math.round(sim*100000000.0)/100000000.0; // 소수점 여덟째 자리에서 반올림한다.
 			
 			//System.out.println("ADC1: <"+item1ID+", "+item2ID+"> sim: "+sim);
@@ -303,7 +308,7 @@ public class MakeInitialIST {
 			
 			if(sim > 1 && sim < 1.1) sim = 1.0;
 			
-			pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, numOfCommonRatings, sim);
+			pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, G, H, numOfCommonRatings, sim);
 			
 			System.out.println("ADC1: <"+item1ID+", "+item2ID+"> sim: "+sim);
 			
@@ -351,7 +356,8 @@ public class MakeInitialIST {
 				}
 				
 				
-				double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; int count=0;
+				double A = 0; double B=0; double C=0; double D=0; double E=0; double F=0; double G=-1; double H=-1;
+				int numOfCommonRatings=0;
 				double x = 0; double y=0; int u1;
 				for(int i=1; i <= this.numOfItems; i++)
 				{
@@ -366,7 +372,7 @@ public class MakeInitialIST {
 					D += userAvg[i]*userAvg[i];
 					E += x*x;
 					F += y*y;	
-					count++;
+					numOfCommonRatings++;
 				}
 				
 				
@@ -378,8 +384,8 @@ public class MakeInitialIST {
 				L1 = Math.sqrt(L1);
 				L2 = Math.sqrt(L2);
 				
-				double H = A-B-C+D;
-				double sim = H/(L1*L2);
+				double Upper = A-B-C+D;
+				double sim = Upper/(L1*L2);
 				sim = Math.round(sim*100000000.0)/100000000.0; // 소수점 여덟째 자리에서 반올림한다.
 				
 				System.out.println("ADC2: <"+item1ID+", "+item2ID+"> sim: "+sim);
@@ -388,7 +394,7 @@ public class MakeInitialIST {
 				
 				if(sim > 1 && sim < 1.1) sim = 1.0;
 				
-				pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, count, sim);
+				pair = new ISTPair_ADC(item1ID, item2ID, A, B, C, D, E, F, G, H, numOfCommonRatings, sim);
 				return pair;
 			} catch (Exception e) {
 				System.err.println("getSim_ADC2 Exception: "+e.getMessage()+" // "+e.getStackTrace());
