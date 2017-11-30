@@ -16,13 +16,13 @@ public class Main_PrepareDataSet {
 		*/
 		
 		// 생성자
-		/*
+		
 		String testSetPath = "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small\\testsets\\";
 		String schema = "movielens";
 		
 		MovieLensDataset mld = new MovieLensDataset(schema, testSetPath, 671, 9125, 100004);
 		mld.loadInitialDataset_into_DB(); // 무비렌즈 초기 text 데이터로부터 DB로 읽어들이는 함수
-		*/
+		
 		//mld.makeTestDataSet(testSetPath, schema, 0.2); // 0.2, 0.4, 0.6, 0.8
 		//mld.makeCumulatedDataSet(testSetPath, 0.2, 0.3);
 		/*mld.makeCumulatedDataSet(testSetPath, 0.3, 0.4);

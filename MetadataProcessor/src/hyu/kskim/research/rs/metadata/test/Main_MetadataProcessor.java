@@ -11,15 +11,15 @@ public class Main_MetadataProcessor {
 		
 		SearchAPI api = new SearchAPI();
 		try {
-			api.apitest();
+			//api.apitest();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		//ContentMetadataCrawler crawler = new ContentMetadataCrawler("movielens", 9175);
-		//crawler.runExtractWebLinks();
-		
+		ContentMetadataCrawler crawler = new ContentMetadataCrawler("movielens", dir, 9125);
+		crawler.runExtractWikiDocs();
+		crawler.processUnCollectedItems();
 		// Gets the text of the main page and prints it.
 		
 	}

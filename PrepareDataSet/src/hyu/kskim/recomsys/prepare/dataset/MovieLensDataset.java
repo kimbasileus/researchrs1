@@ -8,6 +8,8 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import hyu.kskim.recomsys.prepare.utils.DBManager;
 import hyu.kskim.recomsys.prepare.utils.FileIO;
@@ -45,11 +47,13 @@ public class MovieLensDataset {
 	}
 	
 	public void loadInitialDataset_into_DB() {		
-		this.loadRatings_into_DB(this.schema);
-		this.loadUsers_into_DB(this.schema);
-		this.loadItems_into_DB(this.schema);
-		this.loadMovieURLData_into_ItemDB(this.schema);
-		this.changeItemID(this.schema);
+		//this.loadRatings_into_DB(this.schema);
+		//this.loadUsers_into_DB(this.schema);
+		//this.loadItems_into_DB(this.schema);
+		//this.loadMovieURLData_into_ItemDB(this.schema);
+		//this.changeItemID(this.schema);
+		//this.verify_itemIDs("movielens", 0, true);
+		
 	}
 	
 	public void loadRatings_into_DB(String schema) {  // If the table is trainset, tableName=ratings_trainset
@@ -131,7 +135,7 @@ public class MovieLensDataset {
 			 BufferedReader reader = new BufferedReader(new FileReader(dir));
 			 String inputLine = null;
 			 
-			 String temp[] = null; int movieID; String title; String genres;
+			 String temp[] = null; int movieID; String title; String genres; int year = -1;
 			 int count = -1;
 			 while ((inputLine = reader.readLine()) != null){
 				 if(count==-1) {
@@ -151,20 +155,21 @@ public class MovieLensDataset {
    					 for(int i=1; i <= length-2; i++)
    						 if(i != length-2) title = title + temp[i]+", ";
    						 else title = title + temp[i];
-   					 
    					 title = title.replace("'", "\\'").replace("|", ",");
+   					 year = getYear(title);
 				 }else {
 				 
 					 movieID = Integer.parseInt(temp[0]);
 					 title = temp[1].replace("'", "\\'");
+					 year = getYear(title);
 					 genres = temp[2].replace("'", "\\'").replace("|", ",");
 				 
 				 }
 				 count++;
-				 System.out.println("["+count+"] \t"+movieID+"\t"+title+"\t"+genres);
+				 System.out.println("["+count+"] \t"+movieID+"\t"+title+"\t"+year+"\t"+genres);
 				 
-				 String sql = "INSERT INTO `"+schema+"`.`items` (`ID`, `movielensID`, `name`, `genres`) "
-				 				+ "VALUES ('"+count+"', '"+movieID+"', '"+title+"', '"+genres+"');";
+				 String sql = "INSERT INTO `"+schema+"`.`items` (`ID`, `movielensID`, `name`, `year`, `genres`) "
+				 				+ "VALUES ('"+count+"', '"+movieID+"', '"+title+"', '"+year+"', '"+genres+"');";
 				 
 				 db.getStmt().executeUpdate(sql);
 				
@@ -221,6 +226,17 @@ public class MovieLensDataset {
 		}
 	}
 	
+	public int getYear(String sen) {
+		Pattern p = Pattern.compile("\\((.*?)\\)", Pattern.CASE_INSENSITIVE);
+		Matcher m = p.matcher(sen);
+		
+		while(m.find()) {
+			String line = m.group(1).trim();
+			if( line.matches("[0-9]{4}")) return Integer.parseInt(line);
+		}
+		
+		return -1;
+	}
 	
 	public void changeItemID(String schema) {
 		try {
