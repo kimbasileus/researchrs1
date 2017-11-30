@@ -55,13 +55,12 @@ public class MakeInitialIST {
 		try {
 			// 0 기존의 캐싱되어 있던 IST 삭제
 			this.db.getStmt().execute("delete FROM "+this.dbSchema+".ist;");
-			
+						
 			// 1. User-Item Rating을 Item Vector 타입으로 메모리로 로딩
 			for(int item=1; item <=numOfItems; item++) loadUserRatings_from_DB(item);
-						
+			
 			// 2. User Average 값들을 메모리로 로딩
 			loadUserAvg_from_DB();
-						
 			
 			// 3. 각 아이템 쌍에 대하여 Item to Item Similarity를 계산 (Adjusted Cosine Similarity)
 			for(int item1=1; item1 <=numOfItems; item1++) {
@@ -82,17 +81,6 @@ public class MakeInitialIST {
 				db2.getStmt().executeBatch();
 				db2.getStmt().close();
 				db2.closeDB();
-				
-				/*
-				int n = list.size();
-				StringBuffer sb = new StringBuffer();
-				for(int j=0; j<n ; j++) {
-					if(j!=n-1) sb.append(list.get(j)).append("\n");
-					else sb.append(list.get(j));
-				}
-				
-				this.file.writer(dir, sb.toString());
-				*/
 			}
 			
 			
@@ -152,7 +140,6 @@ public class MakeInitialIST {
 		String sql = "INSERT INTO `"+this.dbSchema+"`.`ist` (`ID`, `item1ID`, `item2ID`, `similarity`, `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`, `num`) "
 				+ "VALUES ('1', '"+pair.item1ID+"', '"+pair.item2ID+"', '"+pair.sim+"', "
 				+ "'"+pair.A+"', '"+pair.B+"', '"+pair.C+"', '"+pair.D+"', '"+pair.E+"', '"+pair.F+"', '"+pair.G+"', '"+pair.H+"', '"+pair.num+"');"; // userID에 대한 정렬 반드시 필요
-		
 		try {
 			dm.getStmt().addBatch(sql);
 			//this.db.getStmt().executeUpdate(sql);
@@ -160,7 +147,6 @@ public class MakeInitialIST {
 			System.err.println("writeIST Exception: "+e.getMessage());
 		}
 	}
-	
 	
 	
 	

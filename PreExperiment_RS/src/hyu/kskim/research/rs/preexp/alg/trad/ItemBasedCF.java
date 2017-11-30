@@ -97,6 +97,8 @@ public class ItemBasedCF{
 			
 			String sql = "SELECT item1ID, item2ID, similarity FROM "+this.dbSchema+".ist "
 					+ "where item1ID = "+targetItemID+" or item2ID = "+targetItemID+" order by similarity desc;";
+			
+			//String sql = "SELECT item1ID, item2ID, similarity FROM movielens.ist where item1ID = "+targetItemID+" union SELECT item1ID, item2ID, similarity FROM movielens.ist where item2ID = "+targetItemID+" order by similarity desc;";
 			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
 			int item1ID; int item2ID; double sim;
 			while(rs0.next()) {

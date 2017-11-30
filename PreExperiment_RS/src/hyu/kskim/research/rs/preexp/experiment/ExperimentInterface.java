@@ -132,7 +132,7 @@ public class ExperimentInterface {
 					System.out.println(count+"]\t User "+testSet.userID+", item "+testSet.itemID+": rating "+predicted_rating);
 				}
 				
-				if(count==7000) break;
+				//if(count==7000) break;
 			}
 			
 			int numOfTotalTestSet = this.numOfTestSets; // 전체 테스트케이스의 수
