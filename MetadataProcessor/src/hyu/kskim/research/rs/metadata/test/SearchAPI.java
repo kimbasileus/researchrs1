@@ -9,38 +9,6 @@ import javax.security.auth.login.FailedLoginException;
 import java.io.*;
 
 public class SearchAPI {
-	public void apitest2() throws FileNotFoundException, IOException, ClassNotFoundException {
-		Wiki wiki = null;
-		File f = new File("wiki.dat");
-		if (f.exists()) // we already have a copy on disk
-		{
-		   ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
-		   wiki = (Wiki)in.readObject();
-		}
-		else
-		{
-		   try
-		   {
-		       wiki = new Wiki("en.wikipedia.org"); // create a new wiki connection to en.wikipedia.org
-		       wiki.setThrottle(5000); // set the edit throttle to 0.2 Hz
-		       wiki.login("kyungskim6126", "kyungsookim"); // log in as user ExampleBot, with the specified password
-		       
-		       System.out.println(wiki.getPageText("The matrix") );
-		   }
-		   catch (Exception ex)
-		   {
-		       // deal with failed login attempt
-		   }
-		}
-		try
-		{
-			String page[] = null;
-			//System.out.println(page[0]);
-			
-		}catch(Exception e) {
-			System.err.println("2 Exception: "+e.getMessage());
-		}
-	}
 	
 	public void apitest() {
 		// Key: AIzaSyDXKjgITul-T7jGINpSfK3TZDYQWiFfLWo
@@ -61,7 +29,7 @@ public class SearchAPI {
 			/*
 			 * 
 			 */
-			URL url = new URL("https://en.wikipedia.org/w/index.php?search=The_Cook_the_Thief_His_Wife_%26_Her_Lover");
+			URL url = new URL("https://api.themoviedb.org/3/movie/15602?api_key=b09f9b1f96f996830178b77e5686289b");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 	        conn.setRequestMethod("GET");
 	        conn.setRequestProperty("Accept", "application/json");

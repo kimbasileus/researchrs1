@@ -49,8 +49,8 @@ public class MovieLensDataset {
 	public void loadInitialDataset_into_DB() {		
 		//this.loadRatings_into_DB(this.schema);
 		//this.loadUsers_into_DB(this.schema);
-		//this.loadItems_into_DB(this.schema);
-		//this.loadMovieURLData_into_ItemDB(this.schema);
+		this.loadItems_into_DB(this.schema);
+		this.loadMovieURLData_into_ItemDB(this.schema);
 		//this.changeItemID(this.schema);
 		//this.verify_itemIDs("movielens", 0, true);
 		

@@ -7,15 +7,15 @@ import java.sql.*;
 import hyu.kskim.research.rs.utils.DBManager;
 import hyu.kskim.research.rs.utils.FileIO;
 
-public class ContentMetadataCrawler {
+public class MetadataCollector_MovieLens {
 	String dir = null;
 	String dbSchema = null;
 	int numOfItems = 0;
 	DBManager db = null;
 	FileIO file = null;
-	WebCrawler crawler = null;
+	public WebCrawler crawler = null;
 	
-	public ContentMetadataCrawler(String schema, String dir, int numOfItems) {
+	public MetadataCollector_MovieLens(String schema, String dir, int numOfItems) {
 		this.dbSchema = schema;
 		this.dir = dir;
 		this.numOfItems = numOfItems;
@@ -38,8 +38,8 @@ public class ContentMetadataCrawler {
 			String page =  null;
 			StringBuffer sb = new StringBuffer();
 			int ratio = 1;
-			for(int itemID = 4001; itemID <= 6000; itemID++) {
-				page = runExtractWikiDocs(itemID, true);
+			for(int itemID = 1; itemID <= 9125; itemID++) {
+				page = runExtractWikiDocs(itemID, 0);
 				//ratio = (itemID/1000)+1;
 				if(page == null) {
 					sb.append(itemID).append("\n");
@@ -48,6 +48,8 @@ public class ContentMetadataCrawler {
 				if(page.length() < 10) continue;
 				
 				this.file.writer(dir+"\\item_"+itemID+".doc", page);
+				this.db.getStmt().executeUpdate("INSERT INTO `"+this.dbSchema+"`.`items_metadata` (`itemID`, `source`) "
+						+ "VALUES ('"+itemID+"', 'wiki');");
 				System.out.println("Item "+itemID+" Disk에 쓰기 완료");
 			}
 			
@@ -59,7 +61,7 @@ public class ContentMetadataCrawler {
 	
 	
 	// 주어진 아이템과 관련된 웹 문서들의 링크들을 구글 검색엔진으로부터 추출하여 반환한다.
-	public String runExtractWikiDocs(int itemID, boolean isFirst) {
+	public String runExtractWikiDocs(int itemID, int trial) {
 		try {
 			// 1. 해당 아이템의 제목 구하기
 			String sql = "SELECT `name`, `year` FROM "+this.dbSchema+".items where ID = "+itemID+";";
@@ -77,19 +79,27 @@ public class ContentMetadataCrawler {
 			//String key = "AIzaSyDuorW5sQTbxJxASqyi-MIfb3fbx7rjVPY";
 
 			title = this.getCanonicalTitleForm(title);
-			
-			// 재시도인 경우 title을 조금 더 강화한다.
-			if(!isFirst) {
+
+			if(trial==1) {
 				title  = title.replace("?", "");
+				if(!title.contains("The_")) title = "The_"+title;
+				else title.replace("The_", "");
+			}else if(trial==2) {
+				year = year -1;
 			}
+			
 			String query = "https://en.wikipedia.org/w/index.php?search="+title;
 			String webPage = new String("".getBytes("UTF-8"),"UTF-8");
-			webPage = this.crawler.getWebPage_for_Wiki(query + "_(film)");
-		
+			if(trial==0 || trial == 1) 
+				webPage = this.crawler.getWebPage_for_Wiki(query + "_(film)");
+			else //(trial == 2)
+				webPage = this.crawler.getWebPage_for_Wiki(query + "_("+(year+2)+"_film)");
+			
 			System.out.println(title);
 			
 			// 추출 실패/
 			boolean isCast = false; boolean isPlot = false;
+			
 			if(!webPage.contains("Cast") && !webPage.contains("Plot") && !webPage.contains("Directed by")) {
 				webPage = this.crawler.getWebPage_for_Wiki(query + "_("+year+"_film)");
 				System.out.println("경우 3");
@@ -98,10 +108,10 @@ public class ContentMetadataCrawler {
 				webPage = this.crawler.getWebPage_for_Wiki(query);
 				System.out.println("경우 4");
 			}
-			
-			if(!webPage.contains("Plot") && !webPage.contains("Cast") && !webPage.contains("Directed by")) return null;
-			
-			// webPage = webPage + "END_File";
+
+			if(!webPage.contains("Cast") && !webPage.contains("Plot") && !webPage.contains("Directed by")) return null;
+
+
 			webPage = webPage.replaceAll("<.*?>", "").replaceAll("\\^", "").replaceAll("\\(.*?\\)", "").
 					replaceAll("\\[(.*?)\\]", "").replaceAll("\\{.*?\\}", "").replaceAll("[&][#](.*?)[;]", " ");
 			
@@ -145,7 +155,7 @@ public class ContentMetadataCrawler {
 	
 	
 	
-	public void processUnCollectedItems() {
+	public void processUnCollectedItems(int trial) {
 		try {
 			// 1. 
 			ArrayList<Integer> list = new ArrayList<Integer>();
@@ -160,13 +170,15 @@ public class ContentMetadataCrawler {
 			reader.close();
 			if(list.size() == 0) return;
 			
+			
+			
 			// 2. 
 			String page = null;
 			StringBuffer sb = new StringBuffer();
 			for(int i=0; i < list.size(); i++) {
 				int itemID = list.get(i);
 				
-				page = runExtractWikiDocs(itemID, false);
+				page = runExtractWikiDocs(itemID, trial);
 				//ratio = (itemID/1000)+1;
 				if(page == null) {
 					sb.append(itemID).append("\n");
@@ -175,6 +187,9 @@ public class ContentMetadataCrawler {
 				if(page.length() < 10) continue;
 				
 				this.file.writer(dir+"\\item_"+itemID+".doc", page);
+				this.db.getStmt().executeUpdate("INSERT INTO `"+this.dbSchema+"`.`items_metadata` (`itemID`, `source`) "
+						+ "VALUES ('"+itemID+"', 'wiki');");
+				
 				System.out.println("Item "+itemID+" Disk에 쓰기 완료");
 			}
 			
@@ -231,4 +246,99 @@ public class ContentMetadataCrawler {
 	
 	
 	//////////////////////////////////III. By IMDB ////////////////////////////////////////////////////
+	public void runExtractIMDBDocs() {
+		try {
+			// 1. 
+			ArrayList<Integer> list = new ArrayList<Integer>();
+			BufferedReader reader = new BufferedReader(new FileReader(dir+"\\item_no_collected.txt"));
+			String inputLine = null;
+			
+			while ((inputLine = reader.readLine()) != null){
+				System.out.println(inputLine);
+				inputLine = inputLine.replace("\n", "");
+				list.add(Integer.parseInt(inputLine));
+			}
+			reader.close();
+			if(list.size() == 0) return;
+			
+			// 2. 
+			String page = null;
+			StringBuffer sb = new StringBuffer();
+			int count = 0;
+			for(int i=0; i < list.size(); i++) {
+				int itemID = list.get(i);
+				
+				count++;
+				page = getPageFromIMDB(itemID);
+				
+				if(page == null) {
+					sb.append(itemID).append("\n");
+					continue;
+				}
+				if(page.length() < 10) continue;
+				
+				this.file.writer(dir+"\\item_"+itemID+".doc", page);
+				/*this.db.getStmt().executeUpdate("INSERT INTO `"+this.dbSchema+"`.`items_metadata` (`itemID`, `source`) "
+						+ "VALUES ('"+itemID+"', 'imdb');");
+				*/
+				System.out.println("Item "+itemID+" Disk에 쓰기 완료");
+				
+				// System.exit(0);
+				if(count%15==0) {
+					System.out.println("1분간 휴식");
+					Thread.sleep(1000*60);
+				}
+			}
+			
+			
+			this.file.writer(dir+"\\item_no_collected_2.txt", sb.toString());
+		}catch(Exception e) {
+			System.err.println("processUnCollectedItems Exception: "+e.getMessage());
+			return;
+		}
+	}
+	
+	public String getPageFromIMDB(int itemID) {
+		try {
+			int imdbID = -1;
+			
+			
+			String imdbPage = null; String imdbPageCast = null;
+			
+			StringBuffer sb = new StringBuffer();
+			StringBuffer imdbSb = new StringBuffer();
+			
+			String sql = "SELECT imdbID, tmdbID FROM movielens.items where ID = "+itemID+";";
+			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
+			while(rs0.next()) {
+				imdbID = rs0.getInt(1);
+			}
+			rs0.close();
+			
+			if(imdbID!=-1) {
+				String query2 = "http://www.imdb.com/title/tt"+imdbID+"/plotsummary";
+				String query3 = "http://www.imdb.com/title/tt"+imdbID+"/fullcredits";
+				imdbPage = this.crawler.getWebPage_for_IMDB(query2);
+				imdbPageCast = this.crawler.getWebPage_for_IMDB_CastingList(query3);
+			}
+			
+		/*	if(tmdbID !=-1) {
+				String query3 = "https://api.themoviedb.org/3/movie/"+tmdbID+"?api_key=b09f9b1f96f996830178b77e5686289b";
+				tmdbPage = this.crawler.getWebPage(query3);
+			}
+			*/
+			
+			if((imdbPage != null ) &&  (imdbPageCast != null ) ) {
+				imdbSb.append(imdbPage).append("\n").append(imdbPageCast);
+				return imdbSb.toString();
+			}
+			else if(imdbPage == null)
+				return ("\n"+imdbPageCast);
+			else
+				return imdbPage;
+		}catch(Exception e) {
+			System.err.println("getPageFromIMDB Exception: "+e.getMessage());
+			return null;
+		}
+	}
 }

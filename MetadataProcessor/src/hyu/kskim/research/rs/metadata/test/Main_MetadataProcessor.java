@@ -1,7 +1,8 @@
 package hyu.kskim.research.rs.metadata.test;
-import java.io.IOException;
+import java.io.*;
 
 import hyu.kskim.research.rs.metadata.collector.*;
+import hyu.kskim.research.rs.utils.FileIO;
 
 public class Main_MetadataProcessor {
 
@@ -9,18 +10,12 @@ public class Main_MetadataProcessor {
 		// TODO Auto-generated method stub
 		String dir = "D:\\Research_LibraryDataSet\\Dataset\\MovieLens_small\\contentmetadata";
 		
-		SearchAPI api = new SearchAPI();
-		try {
-			//api.apitest();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		
-		ContentMetadataCrawler crawler = new ContentMetadataCrawler("movielens", dir, 9125);
-		crawler.runExtractWikiDocs();
-		crawler.processUnCollectedItems();
-		// Gets the text of the main page and prints it.
+		MetadataCollector_MovieLens crawlerM = new MetadataCollector_MovieLens("movielens", dir, 9125);
+		//crawlerM.runExtractWikiDocs();
+		//crawlerM.processUnCollectedItems(2); // trial 1~2 from Wiki
+		crawlerM.runExtractIMDBDocs(); // trial 3 from IMDB
+		//crawlerM.crawler.getWebPage_for_IMDB_CastingList("http://www.imdb.com/title/tt50105/fullcredits");
 		
 	}
 

@@ -70,7 +70,7 @@ public class FileIO {
 			     buffer.append(inputLine).append("\n");
 			 }
 			 reader.close();
-			 System.out.println(buffer.toString());
+			 //System.out.println(buffer.toString());
 
 			return buffer;
 
