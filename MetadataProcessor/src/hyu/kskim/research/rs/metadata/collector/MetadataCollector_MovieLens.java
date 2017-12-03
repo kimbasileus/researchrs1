@@ -7,6 +7,9 @@ import java.sql.*;
 import hyu.kskim.research.rs.utils.DBManager;
 import hyu.kskim.research.rs.utils.FileIO;
 
+/*
+ * Part 1. 웹으로부터 모든 아이템에 대한 문서를 수집하는 클래스 (Wiki, Imdb)
+ */
 public class MetadataCollector_MovieLens {
 	String dir = null;
 	String dbSchema = null;
@@ -37,8 +40,12 @@ public class MetadataCollector_MovieLens {
 		try {
 			String page =  null;
 			StringBuffer sb = new StringBuffer();
-			int ratio = 1;
+			
+			int fIndex = 0;
 			for(int itemID = 1; itemID <= 9125; itemID++) {
+				fIndex = (itemID/2000)+1;
+				if(itemID%2000==0) fIndex--;
+				
 				page = runExtractWikiDocs(itemID, 0);
 				//ratio = (itemID/1000)+1;
 				if(page == null) {
@@ -47,13 +54,13 @@ public class MetadataCollector_MovieLens {
 				}
 				if(page.length() < 10) continue;
 				
-				this.file.writer(dir+"\\item_"+itemID+".doc", page);
+				this.file.writer(dir+"\\contentmetadata_"+fIndex+"\\item_"+itemID+".doc", page);
 				this.db.getStmt().executeUpdate("INSERT INTO `"+this.dbSchema+"`.`items_metadata` (`itemID`, `source`) "
 						+ "VALUES ('"+itemID+"', 'wiki');");
 				System.out.println("Item "+itemID+" Disk에 쓰기 완료");
 			}
 			
-			this.file.writer(dir+"\\item_no_collected.txt", sb.toString());
+			this.file.writer(dir+"\\contentmetadata_"+fIndex+"\\item_no_collected.txt", sb.toString());
 		}catch(Exception e) {
 			System.err.println("runExtractWebLinks-1 Exception: "+e.getMessage());
 		}
@@ -63,6 +70,8 @@ public class MetadataCollector_MovieLens {
 	// 주어진 아이템과 관련된 웹 문서들의 링크들을 구글 검색엔진으로부터 추출하여 반환한다.
 	public String runExtractWikiDocs(int itemID, int trial) {
 		try {
+			
+			
 			// 1. 해당 아이템의 제목 구하기
 			String sql = "SELECT `name`, `year` FROM "+this.dbSchema+".items where ID = "+itemID+";";
 			ResultSet rs0 = this.db.getStmt().executeQuery(sql);
@@ -159,7 +168,7 @@ public class MetadataCollector_MovieLens {
 		try {
 			// 1. 
 			ArrayList<Integer> list = new ArrayList<Integer>();
-			BufferedReader reader = new BufferedReader(new FileReader(dir+"\\item_no_collected.txt"));
+			BufferedReader reader = new BufferedReader(new FileReader(dir+"\\contentmetadata_temp\\item_no_collected.txt"));
 			String inputLine = null;
 			
 			while ((inputLine = reader.readLine()) != null){
@@ -186,7 +195,7 @@ public class MetadataCollector_MovieLens {
 				}
 				if(page.length() < 10) continue;
 				
-				this.file.writer(dir+"\\item_"+itemID+".doc", page);
+				this.file.writer(dir+"\\contentmetadata_temp\\item_"+itemID+".doc", page);
 				this.db.getStmt().executeUpdate("INSERT INTO `"+this.dbSchema+"`.`items_metadata` (`itemID`, `source`) "
 						+ "VALUES ('"+itemID+"', 'wiki');");
 				
@@ -194,7 +203,7 @@ public class MetadataCollector_MovieLens {
 			}
 			
 			
-			this.file.writer(dir+"\\item_no_collected_2.txt", sb.toString());
+			this.file.writer(dir+"\\contentmetadata_temp\\item_no_collected_2.txt", sb.toString());
 		}catch(Exception e) {
 			System.err.println("processUnCollectedItems Exception: "+e.getMessage());
 			return;
@@ -250,7 +259,7 @@ public class MetadataCollector_MovieLens {
 		try {
 			// 1. 
 			ArrayList<Integer> list = new ArrayList<Integer>();
-			BufferedReader reader = new BufferedReader(new FileReader(dir+"\\item_no_collected.txt"));
+			BufferedReader reader = new BufferedReader(new FileReader(dir+"\\contentmetadata_temp\\item_no_collected.txt"));
 			String inputLine = null;
 			
 			while ((inputLine = reader.readLine()) != null){
@@ -277,7 +286,7 @@ public class MetadataCollector_MovieLens {
 				}
 				if(page.length() < 10) continue;
 				
-				this.file.writer(dir+"\\item_"+itemID+".doc", page);
+				this.file.writer(dir+"\\contentmetadata_temp\\item_"+itemID+".doc", page);
 				/*this.db.getStmt().executeUpdate("INSERT INTO `"+this.dbSchema+"`.`items_metadata` (`itemID`, `source`) "
 						+ "VALUES ('"+itemID+"', 'imdb');");
 				*/
@@ -291,7 +300,7 @@ public class MetadataCollector_MovieLens {
 			}
 			
 			
-			this.file.writer(dir+"\\item_no_collected_2.txt", sb.toString());
+			this.file.writer(dir+"\\contentmetadata_temp\\item_no_collected_2.txt", sb.toString());
 		}catch(Exception e) {
 			System.err.println("processUnCollectedItems Exception: "+e.getMessage());
 			return;
