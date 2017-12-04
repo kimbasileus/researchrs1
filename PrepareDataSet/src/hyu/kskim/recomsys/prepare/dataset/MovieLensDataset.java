@@ -575,7 +575,7 @@ public class MovieLensDataset {
 	public void load_userAverage_Into_DB(String schema) {
 		try {
 			ArrayList<Integer> users = new ArrayList<Integer>();
-			ArrayList<UserAvg> avgList = new ArrayList<UserAvg>();
+			ArrayList<RatingAvg> avgList = new ArrayList<RatingAvg>();
 			
 			// 0. DB로부터 모든 사용자들의 ID를 불러온다.
 			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID FROM "+schema+".users;");
@@ -600,7 +600,7 @@ public class MovieLensDataset {
 				if(num==0) avg = -1;
 				else avg = sum/(double)num;
 						
-				avgList.add(new UserAvg(userID, avg, num, sum));
+				avgList.add(new RatingAvg(userID, avg, num, sum));
 				rs1.close();
 				System.out.println("\t-- User "+userID+"'s average: "+avg);
 			}
@@ -608,7 +608,7 @@ public class MovieLensDataset {
 			
 			// 2. 각 사용자별로 구한 평균값들을 DB에 캐싱한다.
 			n = avgList.size();
-			UserAvg avgNode = null;
+			RatingAvg avgNode = null;
 			
 			this.db.getStmt().executeUpdate("delete FROM "+schema+".user_avg;"); // 기존에 캐싱되어 있는 값은 모두 지운다.
 			
@@ -627,6 +627,58 @@ public class MovieLensDataset {
 	
 	
 	
+	public void load_itemAverage_Into_DB(String schema) {
+		try {
+			ArrayList<Integer> items = new ArrayList<Integer>();
+			ArrayList<RatingAvg> avgList = new ArrayList<RatingAvg>();
+			
+			// 0. DB로부터 모든 아이템들의 ID를 불러온다.
+			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID FROM "+schema+".items order by ID asc;");
+			while(rs0.next()) {
+				items.add(rs0.getInt(1));
+			}
+			rs0.close();
+			
+			
+			// 1. training set DB로부터 각 아이템별로 Rating 값들을 구한후 이들의 평균을 계산하여 메모리에 저장한다.
+			int n = items.size();
+			int itemID;
+			for(int i=0; i < n; i++) { // User ID
+				itemID = items.get(i);
+				
+				ResultSet rs1 = this.db.getStmt().executeQuery("SELECT rating FROM "+schema+".ratings_trainset where itemID = "+itemID+";");
+				double sum = 0; int num = 0; double avg=0;
+				while(rs1.next()) {
+					sum += rs1.getDouble(1);
+					num++;
+				}
+				if(num==0) avg = -1;
+				else avg = sum/(double)num;
+						
+				avgList.add(new RatingAvg(itemID, avg, num, sum));
+				rs1.close();
+				System.out.println("\t-- Item "+itemID+"'s average: "+avg);
+			}
+			
+			
+			// 2. 각 사용자별로 구한 평균값들을 DB에 캐싱한다.
+			n = avgList.size();
+			RatingAvg avgNode = null;
+			
+			this.db.getStmt().executeUpdate("delete FROM "+schema+".item_avg;"); // 기존에 캐싱되어 있는 값은 모두 지운다.
+			
+			for(int i=0; i < n; i++) {
+				avgNode = avgList.get(i);
+				
+				this.db.getStmt().executeUpdate("INSERT INTO `"+schema+"`.`item_avg` (`itemID`, `average`, `numOfRating`, `sumOfRating`) "
+						+ "VALUES ('"+avgNode.userID+"', '"+avgNode.average+"', '"+avgNode.numOfRating+"', '"+avgNode.sumOfRating+"');");
+			}
+			System.out.println("\t-- Item average caching is completed.");
+			
+		}catch(Exception e){
+			System.err.println("load_itemAverage_Into_DB error: "+e.getMessage());
+		}
+	}
 	
 	
 	
@@ -762,13 +814,13 @@ class UserInfo{
 }
 
 
-class UserAvg{
+class RatingAvg{
 	public int userID;
 	public double average;
 	public int numOfRating;
 	public double sumOfRating;
 	
-	public UserAvg(int userID, double average, int numOfRating, double sumOfRating) {
+	public RatingAvg(int userID, double average, int numOfRating, double sumOfRating) {
 		super();
 		this.userID = userID;
 		this.average = average;

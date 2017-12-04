@@ -21,7 +21,7 @@ public class Main_PrepareDataSet {
 		String schema = "movielens";
 		
 		MovieLensDataset mld = new MovieLensDataset(schema, testSetPath, 671, 9125, 100004);
-		mld.loadInitialDataset_into_DB(); // 무비렌즈 초기 text 데이터로부터 DB로 읽어들이는 함수
+		//mld.loadInitialDataset_into_DB(); // 무비렌즈 초기 text 데이터로부터 DB로 읽어들이는 함수
 		
 		//mld.makeTestDataSet(testSetPath, schema, 0.2); // 0.2, 0.4, 0.6, 0.8
 		//mld.makeCumulatedDataSet(testSetPath, 0.2, 0.3);
@@ -43,13 +43,14 @@ public class Main_PrepareDataSet {
 		//mld.loadTrain_Test_Dataset_Into_DB(testSetPath, schema, 0.2);
 		
 		//mld.load_userAverage_Into_DB(schema);
+		//mld.load_itemAverage_Into_DB(schema);
 		
 		boolean isBasedItem = false;
 	//	mld.verify_itemIDs("movielens", 0, isBasedItem);
 	//	mld.verify_itemIDs("movielens", 1, isBasedItem);
 	//	mld.verify_itemIDs("movielens", 2, isBasedItem);
 		
-	//	mld.endMovieLensDataset(); // 소멸자
+		mld.endMovieLensDataset(); // 소멸자
 		
 		
 		
@@ -82,6 +83,7 @@ public class Main_PrepareDataSet {
 		//ed.loadTrain_Test_Dataset_Into_DB("D:\\Research_LibraryDataSet\\Dataset\\Epinions\\testsets\\", "epinionscom", 0.2);
 	
 		ed.load_userAverage_Into_DB("epinionscom");
+		ed.load_itemAverage_Into_DB("epinionscom");
 		*/
 	}
 }

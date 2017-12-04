@@ -539,7 +539,7 @@ public class EpinionsDataset {
 	public void load_userAverage_Into_DB(String schema) {
 		try {
 			ArrayList<Integer> users = new ArrayList<Integer>();
-			ArrayList<UserAvg> avgList = new ArrayList<UserAvg>();
+			ArrayList<RatingAvg> avgList = new ArrayList<RatingAvg>();
 			
 			// 0. DB로부터 모든 사용자들의 ID를 불러온다.
 			ResultSet rs0 = this.db.getStmt().executeQuery("SELECT ID FROM "+schema+".users;");
@@ -566,7 +566,7 @@ public class EpinionsDataset {
 				if(num==0) avg = -1;
 				else avg = sum/(double)num;
 						
-				avgList.add(new UserAvg(userID, avg, num, sum));
+				avgList.add(new RatingAvg(userID, avg, num, sum));
 				rs1.close();
 				System.out.println("\t-- User "+userID+"'s average: "+avg);
 			}
@@ -574,7 +574,7 @@ public class EpinionsDataset {
 			
 			// 2. 각 사용자별로 구한 평균값들을 DB에 캐싱한다.
 			n = avgList.size();
-			UserAvg avgNode = null;
+			RatingAvg avgNode = null;
 			
 			this.db.getStmt().executeUpdate("delete FROM "+schema+".user_avg;"); // 기존에 캐싱되어 있는 값은 모두 지운다.
 			

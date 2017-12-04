@@ -28,8 +28,11 @@ class HashNode{ // hashtable 자료 구조
 
 
 public class InvertedIndexer {
-	HashMap<String, HashNode> table = new HashMap<String, HashNode>();
-	HashMap<Integer, Integer> docIndex = new HashMap<Integer, Integer>();
+	public int numOfTotalWords = 0;
+	
+	
+	TreeMap<String, HashNode> table = new TreeMap<String, HashNode>();
+	//HashMap<Integer, Integer> docIndex = new HashMap<Integer, Integer>();
 	
 	// word: 단어, docID: 단어를 포함하는 문서의 ID, n: 해당 문서 내 단어의 빈도 수
 	public boolean addWord(String word, int docID, int n){
@@ -60,9 +63,11 @@ public class InvertedIndexer {
 				node.post.put(docID, n);
 				
 				table.put(word, node);
+				
+				this.numOfTotalWords++;
 			}
 			
-			System.out.println("Success adding the word \""+word+"\"\tin the inverted file: "+table.get(word).numOfDocs+" "+table.get(word).numOfFreq);
+			//System.out.println("Success adding the word \""+word+"\"\tin the inverted file: "+table.get(word).numOfDocs+" "+table.get(word).numOfFreq);
 			
 			return true;
 		}catch(Exception e){
@@ -79,6 +84,7 @@ public class InvertedIndexer {
 			if(!this.table.containsKey(word)) return false;
 			
 			this.table.remove(word);
+			this.numOfTotalWords--;
 			
 			System.out.println("Success delete the word "+word+" in the list.");
 			return true;
@@ -105,6 +111,8 @@ public class InvertedIndexer {
 			node.numOfDocs--;
 			node.numOfFreq -= n;
 			
+			this.numOfTotalWords--;
+			
 			System.out.println("Success delete the word "+word+" with its document "+docID+" in the list: frequency is "+n);
 			
 			return true;
@@ -115,8 +123,26 @@ public class InvertedIndexer {
 	}
 	
 	
+	public ArrayList<String> allWordList(){
+		if(this.getNumOfTotalWords()==0) return null;
+		
+		ArrayList<String> wordList = new ArrayList<String>();
+		Set<String> list = this.table.keySet();
+		
+		for(Iterator<String> it = list.iterator(); it.hasNext(); ) {
+			wordList.add(it.next());
+		}
+		
+		if(wordList.size()==0) return null;
+		else return wordList;
+	}
 	
-	// 주어진 단어의 총 빈도수 (= Term frequency)
+	
+	public int getNumOfTotalWords() {
+		return this.numOfTotalWords;
+	}
+	
+	// 주어진 단어의 총 빈도수 (= Total Term frequency)
 	public int getNumOfTotalFreq(String word){
 		if(!this.table.containsKey(word)) return 0;
 
@@ -138,6 +164,49 @@ public class InvertedIndexer {
 		
 		return node.getTotalNumOfDocs();
 	}
+	
+	// 주어진 단어를 포함하는 문서들의 ID를 리스트 타입으로 반환한다.
+	public ArrayList<Integer> getNAlllDocs_having_word(String word){
+		if(!this.table.containsKey(word)) return null;
+
+		HashNode node = this.table.get(word);
+		
+		if(node==null) return null;
+		if(node.post == null || node.post.size()==0) return null;
+		
+		ArrayList<Integer> docIDs = new ArrayList<Integer>();
+		Set<Integer> keys = node.post.keySet();
+		for(Iterator<Integer> it = keys.iterator(); it.hasNext(); ) {
+			docIDs.add(it.next());
+		}
+		
+		if(docIDs.size()==0) return null;
+		return docIDs;
+	}
+	
+	
+	// 주어진 단어를 포함하는 문서들의 ID와 해당 문서 내에서의 빈도수를 리스트 타입으로 반환한다.
+	public ArrayList<WordFreq> getNAlllDocs_and_Freq_having_word(String word){
+		if(!this.table.containsKey(word)) return null;
+
+		HashNode node = this.table.get(word);
+		
+		if(node==null) return null;
+		if(node.post == null || node.post.size()==0) return null;
+		
+		ArrayList<WordFreq> docObjs = new ArrayList<WordFreq>();
+		Set<Integer> keys = node.post.keySet();
+		int id=0; int freq=0;
+		for(Iterator<Integer> it = keys.iterator(); it.hasNext(); ) {
+			id = it.next();
+			freq = node.post.get(id);
+			
+			docObjs.add(new WordFreq(id, freq));
+		}
+		
+		if(docObjs.size()==0) return null;
+		return docObjs;
+	}		
 	
 	
 	// 특정 문서 내에서 주어진 단어의 빈도수 (=Term frequency in the document)

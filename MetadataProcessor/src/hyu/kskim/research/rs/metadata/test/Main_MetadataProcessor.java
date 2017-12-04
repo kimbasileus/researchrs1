@@ -26,6 +26,9 @@ public class Main_MetadataProcessor {
 		
 		// 수집된 문서들로부터 단어를 추출하여 사전을 구성하고, 이를 DB에 캐싱하는 코드
 		WordDictionary dic = new WordDictionary("movielens", dir, 9125);
+		//dic.readAllWordsFromDB();
+		dic.loadItemAvgList();
+		dic.computeAdvancedStat(2);
 	}
 
 }
